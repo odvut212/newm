@@ -1,0 +1,3404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0F0F14" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="MoneyMgr" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>Money Manager</title>
+
+  <!-- PWA Manifest inline via data URI -->
+  <link rel="manifest" href="data:application/json,{
+    %22name%22:%22Money%20Manager%22,
+    %22short_name%22:%22MoneyMgr%22,
+    %22start_url%22:%22.%22,
+    %22display%22:%22standalone%22,
+    %22background_color%22:%22%230F0F14%22,
+    %22theme_color%22:%22%230F0F14%22,
+    %22orientation%22:%22portrait%22,
+    %22icons%22:[{%22src%22:%22data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%231E1A3A'/%3E%3Ctext x='96' y='130' font-size='100' text-anchor='middle'%3E%F0%9F%92%B0%3C/text%3E%3C/svg%3E%22,%22sizes%22:%22192x192%22,%22type%22:%22image/svg+xml%22}]
+  }">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #0F0F14;
+      --surface: #16161F;
+      --card: #1E1E28;
+      --card2: #252530;
+      --border: #2A2A38;
+      --text: #FFFFFF;
+      --muted: #888888;
+      --dim: #555555;
+      --accent: #7C6EFA;
+      --green: #55EFC4;
+      --red: #FF6B6B;
+      --yellow: #F7B731;
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      height: 100%; width: 100%;
+      background: var(--bg);
+      font-family: 'DM Sans', sans-serif;
+      color: var(--text);
+      overflow: hidden;
+      position: fixed;
+    }
+    #app {
+      height: 100%; width: 100%;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .mono { font-family: 'Space Mono', monospace; }
+
+    /* Scrollable area */
+    #scroll-area {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: calc(70px + var(--safe-bottom));
+    }
+    ::-webkit-scrollbar { width: 0; }
+
+    /* Status bar spacer */
+    .status-bar {
+      padding: 12px 20px 0;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-shrink: 0;
+    }
+    .status-bar span { color: var(--muted); font-size: 12px; font-family: 'Space Mono', monospace; }
+
+    /* Header */
+    .page-header {
+      padding: 14px 20px 0;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .page-header h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; }
+    .page-header p { color: var(--muted); font-size: 13px; font-weight: 500; margin-bottom: 2px; }
+    .avatar {
+      width: 42px; height: 42px; border-radius: 21px;
+      background: linear-gradient(135deg, #7C6EFA, #A855F7);
+      display: flex; align-items: center; justify-content: center; font-size: 20px;
+    }
+
+    /* Balance Card */
+    .balance-card {
+      margin: 16px 16px 0;
+      background: linear-gradient(135deg, #1E1A3A 0%, #2D2060 50%, #1A1535 100%);
+      border-radius: 28px; padding: 22px 22px 18px;
+      border: 1px solid rgba(124,110,250,0.2);
+      position: relative; overflow: hidden;
+    }
+    .balance-card::before {
+      content: ''; position: absolute; top: -30px; right: -30px;
+      width: 120px; height: 120px; border-radius: 50%;
+      background: rgba(124,110,250,0.15);
+    }
+    .balance-card::after {
+      content: ''; position: absolute; bottom: -20px; left: 40px;
+      width: 80px; height: 80px; border-radius: 50%;
+      background: rgba(168,85,247,0.1);
+    }
+    .balance-label { color: rgba(255,255,255,0.5); font-size: 12px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; }
+    .balance-amount { font-family: 'Space Mono', monospace; font-size: 36px; font-weight: 700; margin: 6px 0 2px; letter-spacing: -1px; }
+    .balance-sub { color: rgba(255,255,255,0.4); font-size: 12px; }
+    .balance-row { display: flex; gap: 12px; margin-top: 16px; }
+    .balance-stat {
+      flex: 1; border-radius: 14px; padding: 10px 12px;
+    }
+    .balance-stat.dep { background: rgba(85,239,196,0.12); border: 1px solid rgba(85,239,196,0.2); }
+    .balance-stat.spt { background: rgba(255,107,107,0.12); border: 1px solid rgba(255,107,107,0.2); }
+    .balance-stat p { font-size: 10px; font-weight: 600; letter-spacing: 0.5px; color: rgba(255,255,255,0.45); }
+    .balance-stat h4 { font-family: 'Space Mono', monospace; font-size: 15px; font-weight: 700; margin-top: 4px; }
+    .balance-stat.dep h4 { color: var(--green); }
+    .balance-stat.spt h4 { color: var(--red); }
+
+    /* Quick Actions */
+    .quick-actions { display: flex; gap: 10px; padding: 14px 16px 0; }
+    .qa-btn {
+      flex: 1; background: var(--card); border: none; border-radius: 18px;
+      padding: 14px 6px; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; gap: 7px;
+      transition: transform 0.1s, opacity 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .qa-btn:active { transform: scale(0.94); opacity: 0.8; }
+    .qa-icon {
+      width: 38px; height: 38px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center; font-size: 18px;
+    }
+    .qa-btn span { color: var(--muted); font-size: 11px; font-weight: 600; }
+
+    /* Section header */
+    .section-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 18px 20px 10px;
+    }
+    .section-header h3 { font-size: 16px; font-weight: 700; }
+    .section-header span { color: var(--dim); font-size: 12px; }
+
+    /* Empty state */
+    .empty-state { text-align: center; padding: 30px 0; color: var(--dim); }
+    .empty-state .ei { font-size: 38px; margin-bottom: 8px; }
+    .empty-state p { font-size: 13px; }
+
+    /* Source Card */
+    .source-list { padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
+    .source-card {
+      background: var(--card); border-radius: 20px; padding: 16px;
+      transition: transform 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .source-card:active { transform: scale(0.98); }
+    .src-action-btn {
+      flex: 1; border: none; border-radius: 12px;
+      padding: 9px 0; font-size: 12px; font-weight: 700;
+      cursor: pointer; font-family: 'DM Sans', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.1s;
+    }
+    .src-action-btn:active { transform: scale(0.95); }
+    .dep-btn { background: rgba(85,239,196,0.15); color: var(--green); border: 1px solid rgba(85,239,196,0.25); }
+    .spt-btn { background: rgba(255,107,107,0.15); color: var(--red);   border: 1px solid rgba(255,107,107,0.25); }
+    .source-top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .source-icon {
+      width: 44px; height: 44px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0;
+    }
+    .source-info { flex: 1; min-width: 0; }
+    .source-info h4 {
+      font-size: 15px; font-weight: 700;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .source-info p { font-family: 'Space Mono', monospace; font-size: 13px; font-weight: 700; margin-top: 2px; }
+    .del-btn {
+      background: none; border: none; color: var(--dim);
+      font-size: 18px; cursor: pointer; padding: 4px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .source-stats { display: flex; gap: 8px; margin-bottom: 10px; }
+    .source-stat { flex: 1; background: var(--card2); border-radius: 10px; padding: 8px 10px; }
+    .source-stat p { color: var(--dim); font-size: 10px; font-weight: 600; letter-spacing: 0.5px; }
+    .source-stat h5 { font-family: 'Space Mono', monospace; font-size: 13px; font-weight: 700; margin-top: 3px; }
+    .source-stat.d h5 { color: var(--green); }
+    .source-stat.s h5 { color: var(--red); }
+    .progress-bar-bg { height: 5px; background: var(--card2); border-radius: 10px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; border-radius: 10px; transition: width 0.4s ease; }
+    .progress-label { color: var(--dim); font-size: 10px; margin-top: 4px; }
+
+    /* History Filters */
+    .filter-scroll {
+      display: flex; gap: 8px;
+      overflow-x: auto; padding: 0 16px 0;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .filter-scroll::-webkit-scrollbar { display: none; }
+    .filter-chip {
+      flex-shrink: 0; border: none; border-radius: 20px;
+      padding: 7px 14px; font-size: 12px; font-weight: 600;
+      cursor: pointer; display: flex; align-items: center; gap: 6px;
+      transition: transform 0.1s, opacity 0.1s;
+      -webkit-tap-highlight-color: transparent;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .filter-chip:active { transform: scale(0.93); }
+    .filter-chip.all-chip {
+      background: var(--accent); color: #fff;
+    }
+    .filter-chip.all-chip.inactive {
+      background: var(--card2); color: var(--muted);
+    }
+    .filter-chip.src-chip {
+      background: var(--card2); color: var(--muted);
+    }
+    .filter-chip.src-chip.active {
+      color: #fff;
+    }
+    .filter-type-row {
+      display: flex; gap: 8px; padding: 10px 16px 0;
+    }
+    .type-chip {
+      flex: 1; border: none; border-radius: 12px;
+      padding: 8px 0; font-size: 12px; font-weight: 600;
+      cursor: pointer; font-family: 'DM Sans', sans-serif;
+      background: var(--card2); color: var(--muted);
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.1s;
+    }
+    .type-chip:active { transform: scale(0.95); }
+    .type-chip.active-dep { background: rgba(85,239,196,0.15); color: var(--green); border: 1px solid rgba(85,239,196,0.3); }
+    .type-chip.active-spt { background: rgba(255,107,107,0.15); color: var(--red); border: 1px solid rgba(255,107,107,0.3); }
+    .type-chip.active-all { background: rgba(124,110,250,0.15); color: var(--accent); border: 1px solid rgba(124,110,250,0.3); }
+    .filter-summary {
+      padding: 10px 16px 2px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .filter-summary span { color: var(--dim); font-size: 12px; }
+    .filter-summary strong { color: var(--muted); font-size: 12px; }
+
+    /* Currency toggle */
+    .cur-tab {
+      background: none; border: none; border-radius: 10px;
+      padding: 6px 14px; font-size: 12px; font-weight: 700;
+      cursor: pointer; color: var(--dim); font-family: 'DM Sans', sans-serif;
+      -webkit-tap-highlight-color: transparent; transition: all 0.15s;
+    }
+    .cur-active { background: var(--accent); color: #fff; }
+
+    /* History */
+    .tx-list { padding: 0 16px; display: flex; flex-direction: column; gap: 8px; }
+
+    /* Swipe-to-delete wrapper */
+    .tx-wrapper {
+      position: relative; overflow: hidden; border-radius: 16px;
+    }
+    .tx-delete-bg {
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, #C0392B, #FF6B6B);
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: flex-end;
+      padding-right: 20px; gap: 8px;
+      pointer-events: none;
+    }
+    .tx-delete-bg span { font-size: 20px; }
+    .tx-delete-bg p { color: #fff; font-size: 13px; font-weight: 700; }
+    .tx-card {
+      background: var(--card); border-radius: 16px; padding: 13px 14px;
+      display: flex; align-items: center; gap: 12px;
+      position: relative; z-index: 1;
+      transition: transform 0.18s ease;
+      touch-action: pan-y;
+      user-select: none;
+    }
+    .tx-card.swiping { transition: none; }
+
+    /* Delete confirm sheet */
+    .del-confirm {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.75);
+      display: flex; align-items: flex-end; justify-content: center;
+      z-index: 300; animation: fadeIn 0.18s ease;
+    }
+    .del-confirm-box {
+      width: 100%; max-width: 500px;
+      background: #1A1A24;
+      border-radius: 28px 28px 0 0;
+      padding: 20px 20px calc(28px + var(--safe-bottom));
+      border: 1px solid var(--border); border-bottom: none;
+      animation: slideUp 0.22s cubic-bezier(0.34,1.1,0.64,1);
+    }
+    .del-confirm-box .handle { width: 40px; height: 4px; background: #333; border-radius: 2px; margin: 0 auto 16px; }
+    .del-confirm-box h3 { font-size: 17px; font-weight: 700; margin-bottom: 6px; color: var(--red); }
+    .del-confirm-box p { font-size: 13px; color: var(--muted); margin-bottom: 18px; line-height: 1.5; }
+    .del-tx-preview {
+      background: var(--card2); border-radius: 14px; padding: 12px 14px;
+      display: flex; align-items: center; gap: 10px; margin-bottom: 18px;
+    }
+    .del-tx-preview span.di { font-size: 22px; }
+    .del-tx-preview div { flex: 1; }
+    .del-tx-preview div h4 { font-size: 14px; font-weight: 600; }
+    .del-tx-preview div p { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .del-tx-preview span.da { font-family: 'Space Mono', monospace; font-size: 15px; font-weight: 700; }
+
+    /* Date filter row */
+    .date-filter-row {
+      display: flex; gap: 8px; padding: 10px 16px 0; align-items: center;
+    }
+    .date-select-wrap {
+      flex: 1; position: relative;
+    }
+    .date-select-wrap select {
+      width: 100%; appearance: none; -webkit-appearance: none;
+      background: var(--card2); border: 1.5px solid transparent;
+      border-radius: 12px; padding: 9px 28px 9px 12px;
+      color: var(--text); font-size: 12px; font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer; outline: none;
+      transition: border-color 0.15s;
+    }
+    .date-select-wrap select:focus { border-color: var(--accent); }
+    .date-select-wrap select.active { border-color: var(--yellow); color: var(--yellow); background: rgba(247,183,49,0.1); }
+    .date-select-wrap::after {
+      content: '▾'; position: absolute; right: 10px; top: 50%;
+      transform: translateY(-50%); color: var(--dim); font-size: 11px;
+      pointer-events: none;
+    }
+    .date-clear-btn {
+      background: rgba(247,183,49,0.15); border: 1px solid rgba(247,183,49,0.3);
+      border-radius: 12px; padding: 9px 11px; cursor: pointer;
+      color: var(--yellow); font-size: 13px; font-weight: 700;
+      -webkit-tap-highlight-color: transparent; white-space: nowrap;
+      font-family: 'DM Sans', sans-serif; flex-shrink: 0;
+      display: none;
+    }
+    .date-clear-btn.show { display: block; }
+
+    /* Sort chips */
+    .sort-chip {
+      flex-shrink: 0; border: 1px solid transparent; border-radius: 10px;
+      padding: 6px 11px; font-size: 12px; font-weight: 600;
+      cursor: pointer; font-family: 'DM Sans', sans-serif;
+      background: var(--card2); color: var(--muted);
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.1s;
+      white-space: nowrap;
+    }
+    .sort-chip:active { transform: scale(0.93); }
+    .active-sort {
+      background: rgba(124,110,250,0.2) !important;
+      color: var(--accent) !important;
+      border-color: rgba(124,110,250,0.35) !important;
+    }
+    .edit-sheet {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.75);
+      display: flex; align-items: flex-end; justify-content: center;
+      z-index: 300; animation: fadeIn 0.18s ease;
+    }
+    .edit-sheet-box {
+      width: 100%; max-width: 500px;
+      background: #1A1A24;
+      border-radius: 28px 28px 0 0;
+      padding: 20px 20px calc(28px + var(--safe-bottom));
+      border: 1px solid var(--border); border-bottom: none;
+      animation: slideUp 0.22s cubic-bezier(0.34,1.1,0.64,1);
+    }
+    .edit-sheet-box .handle { width: 40px; height: 4px; background: #333; border-radius: 2px; margin: 0 auto 16px; }
+    .edit-sheet-box h3 { font-size: 17px; font-weight: 700; margin-bottom: 16px; color: var(--accent); }
+    .edit-sheet-box label { color: var(--muted); font-size: 13px; display: block; margin-bottom: 7px; }
+    .edit-sheet-box input {
+      width: 100%; background: var(--card2);
+      border: 1px solid #333; border-radius: 14px;
+      padding: 13px 15px; color: var(--text);
+      font-size: 15px; font-family: 'DM Sans', sans-serif;
+      outline: none; margin-bottom: 14px;
+    }
+    .edit-sheet-box input.big { font-size: 24px; font-family: 'Space Mono', monospace; }
+    .edit-sheet-box input:focus { border-color: var(--accent); }
+
+    /* Folder styles */
+    .folder-card {
+      background: var(--card); border-radius: 18px;
+      overflow: hidden; border: 1px solid var(--border);
+      transition: transform 0.15s;
+    }
+    .folder-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 16px; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .folder-header:active { opacity: 0.8; }
+    .folder-chevron {
+      margin-left: auto; color: var(--dim); font-size: 13px;
+      transition: transform 0.2s;
+    }
+    .folder-chevron.open { transform: rotate(90deg); }
+    .folder-body {
+      padding: 0 12px 12px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .folder-body.collapsed { display: none; }
+
+    /* Search highlight */
+    .src-hidden { display: none !important; }
+
+    /* Tag Pills */
+    .tag-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+    .tag-pill {
+      display: inline-flex; align-items: center; gap: 4px;
+      border-radius: 20px; padding: 5px 11px;
+      font-size: 12px; font-weight: 600;
+      cursor: pointer; font-family: 'DM Sans', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.1s;
+      border: 1.5px solid transparent;
+    }
+    .tag-pill:active { transform: scale(0.93); }
+
+    .tx-card {
+      background: var(--card); border-radius: 16px; padding: 13px 14px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .tx-icon {
+      width: 40px; height: 40px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+    .tx-icon.dep { background: rgba(85,239,196,0.15); }
+    .tx-icon.spt { background: rgba(255,107,107,0.15); }
+    .tx-info { flex: 1; min-width: 0; }
+    .tx-info h4 { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tx-info p { color: var(--dim); font-size: 11px; margin-top: 2px; }
+    .tx-amount { font-family: 'Space Mono', monospace; font-size: 15px; font-weight: 700; flex-shrink: 0; }
+    .tx-amount.dep { color: var(--green); }
+    .tx-amount.spt { color: var(--red); }
+
+    /* Bottom Nav */
+    #bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 10px 0 calc(10px + var(--safe-bottom));
+      display: flex; justify-content: space-around;
+      z-index: 50;
+    }
+    .nav-btn {
+      background: none; border: none; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      padding: 0 30px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .nav-btn span.ni { font-size: 22px; }
+    .nav-btn span.nl { font-size: 11px; font-weight: 600; color: var(--dim); transition: color 0.2s; }
+    .nav-btn.active span.nl { color: var(--accent); }
+    .nav-dot {
+      width: 6px; height: 6px; border-radius: 3px;
+      background: var(--accent); margin: 0 auto;
+      display: none;
+    }
+    .nav-btn.active .nav-dot { display: block; }
+
+    /* Tags */
+    .tag-pill {
+      display:inline-flex; align-items:center; gap:4px;
+      padding:3px 9px; border-radius:20px;
+      font-size:11px; font-weight:700; cursor:pointer;
+      border:none; font-family:'DM Sans',sans-serif;
+      white-space:nowrap; flex-shrink:0;
+      -webkit-tap-highlight-color:transparent;
+      transition:transform 0.1s;
+    }
+    .tag-pill:active { transform:scale(0.93); }
+    .tag-grid { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
+    .tag-filter-scroll {
+      display:flex; gap:6px; overflow-x:auto;
+      padding:8px 16px 2px; scrollbar-width:none;
+    }
+    .tag-filter-scroll::-webkit-scrollbar { display:none; }
+    .tag-manage-btn {
+      background:var(--card2); border:1px dashed #444;
+      border-radius:20px; padding:4px 10px;
+      font-size:11px; font-weight:700; color:var(--dim);
+      cursor:pointer; -webkit-tap-highlight-color:transparent;
+      font-family:'DM Sans',sans-serif; white-space:nowrap; flex-shrink:0;
+    }
+
+    /* Modal Overlay */
+    .overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.78);
+      display: flex; align-items: flex-end; justify-content: center;
+      z-index: 200; padding: 0 0;
+      animation: fadeIn 0.2s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .modal {
+      width: 100%; max-width: 500px;
+      background: #1A1A24;
+      border-radius: 28px 28px 0 0;
+      padding: 20px 20px calc(32px + var(--safe-bottom));
+      border: 1px solid var(--border);
+      border-bottom: none;
+      animation: slideUp 0.28s cubic-bezier(0.34,1.2,0.64,1);
+      max-height: 92vh;
+      overflow-y: auto;
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-handle {
+      width: 40px; height: 4px; background: #333;
+      border-radius: 2px; margin: 0 auto 18px;
+    }
+    .modal h3 { font-size: 18px; font-weight: 700; margin-bottom: 18px; }
+    .modal label { color: var(--muted); font-size: 13px; display: block; margin-bottom: 7px; }
+    .modal input {
+      width: 100%; background: var(--card2);
+      border: 1px solid #333; border-radius: 14px;
+      padding: 13px 15px; color: var(--text);
+      font-size: 15px; font-family: 'DM Sans', sans-serif;
+      outline: none; margin-bottom: 14px;
+    }
+    .modal input.big { font-size: 24px; font-family: 'Space Mono', monospace; }
+    .modal input:focus { border-color: var(--accent); }
+    .icon-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .icon-opt {
+      width: 44px; height: 44px; border-radius: 12px;
+      background: var(--card2); border: 2px solid transparent;
+      font-size: 20px; cursor: pointer; display: flex;
+      align-items: center; justify-content: center;
+      transition: border-color 0.15s, background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .icon-opt.sel { border-color: var(--accent); background: rgba(124,110,250,0.15); }
+    .source-opts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+    .source-opt {
+      background: var(--card2); border: 2px solid transparent;
+      border-radius: 14px; padding: 11px 14px;
+      cursor: pointer; display: flex; align-items: center; gap: 10px;
+      transition: border-color 0.15s, background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .source-opt.sel-dep { border-color: var(--green); background: rgba(85,239,196,0.08); }
+    .source-opt.sel-spt { border-color: var(--red); background: rgba(255,107,107,0.08); }
+    .source-opt span.sn { color: var(--text); font-weight: 600; font-size: 14px; flex: 1; }
+    .source-opt span.sb { font-family: 'Space Mono', monospace; color: var(--green); font-size: 12px; }
+    .btn-row { display: flex; gap: 10px; }
+    .btn-cancel {
+      flex: 1; background: var(--card2); border: none;
+      border-radius: 16px; padding: 15px; color: var(--muted);
+      font-size: 15px; font-weight: 600; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-cancel:active { opacity: 0.7; }
+    .btn-primary {
+      flex: 2; border: none; border-radius: 16px; padding: 15px;
+      font-size: 15px; font-weight: 700; cursor: pointer; color: #fff;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.1s;
+    }
+    .btn-primary:active { transform: scale(0.96); }
+    .btn-primary.purple { background: linear-gradient(135deg, #7C6EFA, #A855F7); }
+    .btn-primary.green { background: linear-gradient(135deg, #00B894, #55EFC4); color: #0F2420; }
+    .btn-primary.red { background: linear-gradient(135deg, #C0392B, #FF6B6B); }
+
+    /* Toast */
+    #toast {
+      position: fixed; top: 24px; left: 50%; transform: translateX(-50%);
+      padding: 10px 20px; border-radius: 30px;
+      font-size: 13px; font-weight: 600;
+      z-index: 999; white-space: nowrap;
+      pointer-events: none;
+      animation: toastIn 0.25s ease;
+      display: none;
+    }
+    #toast.show { display: block; }
+    #toast.success { background: #1A2D1F; border: 1px solid var(--green); color: var(--green); }
+    #toast.warn { background: #2D1F12; border: 1px solid var(--yellow); color: var(--yellow); }
+    @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(-8px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+
+    /* Install banner */
+    #install-banner {
+      background: linear-gradient(135deg, #1E1A3A, #2D2060);
+      border: 1px solid rgba(124,110,250,0.3);
+      border-radius: 16px; margin: 14px 16px 0;
+      padding: 12px 14px; display: flex; align-items: center; gap: 12px;
+    }
+    #install-banner p { font-size: 12px; color: rgba(255,255,255,0.7); flex: 1; line-height: 1.5; }
+    #install-banner p strong { color: #fff; }
+    #install-btn {
+      background: var(--accent); border: none; border-radius: 12px;
+      padding: 8px 14px; color: #fff; font-size: 12px; font-weight: 700;
+      cursor: pointer; white-space: nowrap; flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #close-banner {
+      background: none; border: none; color: var(--dim);
+      font-size: 18px; cursor: pointer; flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+  <!-- Status Bar -->
+  <div class="status-bar" style="background: var(--surface); flex-shrink:0;">
+    <span id="clock">9:41</span>
+    <span>🔋</span>
+  </div>
+
+  <!-- Scrollable Content -->
+  <div id="scroll-area" style="background: var(--bg);">
+    <!-- HOME PAGE -->
+    <div id="page-home">
+      <div class="page-header">
+        <div>
+          <p>My Wallet</p>
+          <h1>Finance</h1>
+        </div>
+        <button id="profile-icon-btn" onclick="openProfileSheet()" style="background:none;border:none;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent;">
+          <div class="avatar">👤</div>
+        </button>
+      </div>
+
+      <!-- Currency Toggle -->
+      <div style="display:flex;align-items:center;padding:10px 20px 0;gap:10px;">
+        <div style="display:flex;background:var(--card2);border-radius:12px;padding:3px;gap:2px;">
+          <button id="cur-bdt" class="cur-tab" onclick="setCurrency('BDT')">৳ BDT</button>
+          <button id="cur-usd" class="cur-tab" onclick="setCurrency('USD')">$ USD</button>
+        </div>
+        <div id="cur-wallet-badge" style="background:var(--card2);border-radius:10px;padding:5px 12px;font-size:12px;font-weight:700;color:var(--muted);">
+          <span id="cur-wallet-label">৳ Taka Wallet</span>
+        </div>
+      </div>
+      <div id="install-banner" style="display:none;">
+        <p>📲 <strong>Install as App</strong><br>Tap below to add to Home Screen</p>
+        <button id="install-btn">Install</button>
+        <button id="close-banner">✕</button>
+      </div>
+
+      <!-- Balance Card -->
+      <div class="balance-card">
+        <p class="balance-label">Net Balance</p>
+        <h2 class="balance-amount" id="net-balance">৳0.00</h2>
+        <p class="balance-sub" id="source-count">Across 0 sources</p>
+        <div class="balance-row">
+          <div class="balance-stat dep">
+            <p>↓ DEPOSITED</p>
+            <h4 id="total-dep">৳0.00</h4>
+          </div>
+          <div class="balance-stat spt">
+            <p>↑ SPENT</p>
+            <h4 id="total-spt">৳0.00</h4>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="quick-actions">
+        <button class="qa-btn" onclick="openModal('modal-source')" style="border: 1px solid rgba(124,110,250,0.15);">
+          <div class="qa-icon" style="background: rgba(124,110,250,0.18);">➕</div>
+          <span>Add Source</span>
+        </button>
+        <button class="qa-btn" onclick="openDeposit()" style="border: 1px solid rgba(85,239,196,0.15);">
+          <div class="qa-icon" style="background: rgba(85,239,196,0.18);">💵</div>
+          <span>Deposit</span>
+        </button>
+        <button class="qa-btn" onclick="openSpend()" style="border: 1px solid rgba(255,107,107,0.15);">
+          <div class="qa-icon" style="background: rgba(255,107,107,0.18);">💸</div>
+          <span>Spend</span>
+        </button>
+      </div>
+
+      <!-- Sources -->
+      <div class="section-header">
+        <h3>Sources</h3>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span id="src-count-label" style="color:var(--dim);font-size:12px;">0 total</span>
+          <button onclick="openFolderManager()" style="background:var(--card2);border:none;border-radius:10px;padding:5px 10px;color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;-webkit-tap-highlight-color:transparent;">📁 Folders</button>
+        </div>
+      </div>
+
+      <!-- Search Bar -->
+      <div style="padding:0 16px 10px;position:relative;">
+        <span style="position:absolute;left:28px;top:50%;transform:translateY(-50%);font-size:15px;pointer-events:none;">🔍</span>
+        <input id="src-search" type="text" placeholder="Search sources..."
+          oninput="renderSources()"
+          style="width:100%;background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:10px 14px 10px 38px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;" />
+      </div>
+
+      <!-- Folder List + Source List -->
+      <div id="source-list" style="padding:0 16px;display:flex;flex-direction:column;gap:10px;">
+        <div class="empty-state" id="src-empty">
+          <div class="ei">🏦</div>
+          <p>No sources yet. Add one!</p>
+        </div>
+      </div>
+      <div style="height:8px;"></div>
+    </div>
+
+    <!-- SUMMARY PAGE -->
+    <div id="page-summary" style="display:none;">
+      <div class="page-header" style="margin-bottom:6px;">
+        <div><p>Overview</p><h1>Summary</h1></div>
+        <div style="font-size:26px;">📊</div>
+      </div>
+
+      <!-- Period selector -->
+      <div style="display:flex;gap:8px;padding:10px 16px 0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;">
+        <button class="sort-chip active-sort" id="period-all"   onclick="setSummaryPeriod('all')">All Time</button>
+        <button class="sort-chip"             id="period-month" onclick="setSummaryPeriod('month')">This Month</button>
+        <button class="sort-chip"             id="period-week"  onclick="setSummaryPeriod('week')">This Week</button>
+        <button class="sort-chip"             id="period-year"  onclick="setSummaryPeriod('year')">This Year</button>
+      </div>
+
+      <!-- Income vs Spending side by side -->
+      <div style="display:flex;gap:10px;padding:14px 16px 0;">
+        <div style="flex:1;background:rgba(85,239,196,0.08);border:1px solid rgba(85,239,196,0.2);border-radius:20px;padding:16px;">
+          <p style="color:rgba(255,255,255,0.5);font-size:11px;font-weight:700;letter-spacing:1px;">↓ INCOME</p>
+          <h2 id="sum-income" class="mono" style="color:var(--green);font-size:22px;font-weight:700;margin:6px 0 2px;">৳0.00</h2>
+          <p id="sum-income-count" style="color:var(--dim);font-size:11px;">0 deposits</p>
+        </div>
+        <div style="flex:1;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);border-radius:20px;padding:16px;">
+          <p style="color:rgba(255,255,255,0.5);font-size:11px;font-weight:700;letter-spacing:1px;">↑ SPENDING</p>
+          <h2 id="sum-spending" class="mono" style="color:var(--red);font-size:22px;font-weight:700;margin:6px 0 2px;">৳0.00</h2>
+          <p id="sum-spending-count" style="color:var(--dim);font-size:11px;">0 expenses</p>
+        </div>
+      </div>
+
+      <!-- Balance row -->
+      <div style="margin:10px 16px 0;background:linear-gradient(135deg,#1E1A3A,#2D2060);border-radius:18px;padding:14px 16px;border:1px solid rgba(124,110,250,0.2);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <p style="color:rgba(255,255,255,0.5);font-size:11px;font-weight:700;letter-spacing:1px;">NET BALANCE</p>
+          <h3 id="sum-net" class="mono" style="font-size:18px;font-weight:700;color:#fff;">৳0.00</h3>
+        </div>
+        <div style="height:1px;background:rgba(255,255,255,0.08);margin-bottom:10px;"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <p style="color:rgba(255,255,255,0.4);font-size:11px;font-weight:700;letter-spacing:1px;">AFTER DEBT</p>
+          <h3 id="sum-after-debt" class="mono" style="font-size:18px;font-weight:700;color:var(--red);">৳0.00</h3>
+        </div>
+      </div>
+
+      <!-- Debt summary card -->
+      <div style="margin:10px 16px 0;background:rgba(255,107,107,0.07);border:1px solid rgba(255,107,107,0.2);border-radius:18px;padding:14px 16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <p style="color:var(--red);font-size:13px;font-weight:700;">🔴 Total Debt</p>
+          <h3 id="sum-total-debt" class="mono" style="font-size:18px;font-weight:700;color:var(--red);">৳0.00</h3>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <div style="flex:1;background:rgba(0,0,0,0.2);border-radius:12px;padding:10px;">
+            <p style="color:var(--dim);font-size:10px;font-weight:700;">DEBT TRANSACTIONS</p>
+            <h4 id="sum-debt-tx-amt" class="mono" style="color:var(--red);font-size:14px;font-weight:700;margin-top:4px;">৳0.00</h4>
+            <p id="sum-debt-tx-count" style="color:var(--dim);font-size:10px;margin-top:2px;">0 transactions</p>
+          </div>
+          <div style="flex:1;background:rgba(0,0,0,0.2);border-radius:12px;padding:10px;">
+            <p style="color:var(--dim);font-size:10px;font-weight:700;">DEBT SOURCES</p>
+            <h4 id="sum-debt-src-amt" class="mono" style="color:var(--red);font-size:14px;font-weight:700;margin-top:4px;">৳0.00</h4>
+            <p id="sum-debt-src-count" style="color:var(--dim);font-size:10px;margin-top:2px;">0 sources</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Savings rate -->
+      <div style="margin:10px 16px 0;background:var(--card);border-radius:18px;padding:14px 16px;border:1px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <p style="color:var(--muted);font-size:13px;font-weight:700;">💹 Savings Rate</p>
+          <span id="sum-savings-rate" style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--green);">0%</span>
+        </div>
+        <div style="height:8px;background:var(--card2);border-radius:10px;overflow:hidden;">
+          <div id="sum-savings-bar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--green),#00B894);border-radius:10px;transition:width 0.5s ease;"></div>
+        </div>
+      </div>
+
+      <!-- Spending by tag -->
+      <div style="margin:10px 16px 0;background:var(--card);border-radius:18px;padding:14px 16px;border:1px solid var(--border);">
+        <p style="color:var(--muted);font-size:13px;font-weight:700;margin-bottom:12px;">🏷️ Spending by Tag</p>
+        <div id="sum-tag-breakdown" style="display:flex;flex-direction:column;gap:8px;">
+          <p style="color:var(--dim);font-size:12px;">No tagged transactions yet.</p>
+        </div>
+      </div>
+
+      <!-- Top spending sources -->
+      <div style="margin:10px 16px 0;background:var(--card);border-radius:18px;padding:14px 16px;border:1px solid var(--border);">
+        <p style="color:var(--muted);font-size:13px;font-weight:700;margin-bottom:12px;">🏦 Spending by Source</p>
+        <div id="sum-source-breakdown" style="display:flex;flex-direction:column;gap:8px;">
+          <p style="color:var(--dim);font-size:12px;">No spending data yet.</p>
+        </div>
+      </div>
+
+      <!-- Debt transactions list -->
+      <div style="margin:10px 16px 0;background:var(--card);border-radius:18px;padding:14px 16px;border:1px solid rgba(255,107,107,0.2);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <p style="color:var(--red);font-size:13px;font-weight:700;">🔴 Debt Transactions</p>
+          <button onclick="openMarkDebt()" style="background:rgba(255,107,107,0.15);border:1px solid rgba(255,107,107,0.25);border-radius:10px;padding:5px 11px;color:var(--red);font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;-webkit-tap-highlight-color:transparent;">+ Mark Debt</button>
+        </div>
+        <div id="sum-debt-list" style="display:flex;flex-direction:column;gap:8px;">
+          <p style="color:var(--dim);font-size:12px;">No debt marked yet.</p>
+        </div>
+      </div>
+
+      <!-- Debt sources list -->
+      <div style="margin:10px 16px 14px;background:var(--card);border-radius:18px;padding:14px 16px;border:1px solid rgba(255,107,107,0.2);">
+        <p style="color:var(--red);font-size:13px;font-weight:700;margin-bottom:12px;">🔴 Debt Sources</p>
+        <div id="sum-debt-sources" style="display:flex;flex-direction:column;gap:8px;">
+          <p style="color:var(--dim);font-size:12px;">No debt sources yet.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORY PAGE -->
+    <div id="page-history" style="display:none;">
+      <div class="page-header" style="margin-bottom:12px;">
+        <div>
+          <p>All Transactions</p>
+          <h1>History</h1>
+        </div>
+      </div>
+
+      <!-- Source Filter Chips -->
+      <div class="filter-scroll" id="filter-chips">
+        <!-- built by JS -->
+      </div>
+
+      <!-- Type Filter Row -->
+      <div class="filter-type-row">
+        <button class="type-chip active-all" id="type-all" onclick="setTypeFilter('all')">🔀 All</button>
+        <button class="type-chip" id="type-dep" onclick="setTypeFilter('deposit')">↓ Deposits</button>
+        <button class="type-chip" id="type-spt" onclick="setTypeFilter('spend')">↑ Expenses</button>
+      </div>
+
+      <!-- Tag Filter Row -->
+      <div style="display:flex;gap:8px;overflow-x:auto;padding:10px 16px 0;-webkit-overflow-scrolling:touch;scrollbar-width:none;" id="tag-filter-scroll">
+        <!-- built by JS -->
+      </div>
+
+      <!-- Date Filter Row -->
+      <div class="date-filter-row">
+        <div class="date-select-wrap">
+          <select id="filter-year" onchange="onDateFilterChange()">
+            <option value="">All Years</option>
+          </select>
+        </div>
+        <div class="date-select-wrap">
+          <select id="filter-month" onchange="onDateFilterChange()">
+            <option value="">All Months</option>
+            <option value="0">January</option>
+            <option value="1">February</option>
+            <option value="2">March</option>
+            <option value="3">April</option>
+            <option value="4">May</option>
+            <option value="5">June</option>
+            <option value="6">July</option>
+            <option value="7">August</option>
+            <option value="8">September</option>
+            <option value="9">October</option>
+            <option value="10">November</option>
+            <option value="11">December</option>
+          </select>
+        </div>
+        <div class="date-select-wrap">
+          <select id="filter-day" onchange="onDateFilterChange()">
+            <option value="">All Days</option>
+          </select>
+        </div>
+        <button class="date-clear-btn" id="date-clear-btn" onclick="clearDateFilter()">✕ Clear</button>
+      </div>
+
+      <!-- Tag Filter Row -->
+      <div class="tag-filter-scroll" id="tag-filter-scroll"></div>
+      <div class="filter-summary">
+        <span id="filter-count">0 transactions</span>
+        <strong id="filter-total"></strong>
+      </div>
+
+      <!-- Sort Bar -->
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 16px 0;">
+        <span style="color:var(--dim);font-size:11px;font-weight:700;letter-spacing:0.5px;white-space:nowrap;">SORT BY</span>
+        <div style="display:flex;gap:6px;overflow-x:auto;flex:1;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px;">
+          <button class="sort-chip active-sort" id="sort-date"   onclick="setSort('date')">  🕐 Date</button>
+          <button class="sort-chip"             id="sort-amount" onclick="setSort('amount')">💰 Amount</button>
+          <button class="sort-chip"             id="sort-name"   onclick="setSort('name')">  🔤 Name</button>
+        </div>
+        <button id="sort-dir-btn" onclick="toggleSortDir()"
+          style="background:var(--card2);border:none;border-radius:10px;padding:6px 10px;color:var(--text);font-size:14px;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent;font-weight:700;">
+          ↓
+        </button>
+      </div>
+
+      <div class="tx-list" id="tx-list">
+        <div class="empty-state" id="tx-empty">
+          <div class="ei">📋</div>
+          <p>No transactions yet</p>
+        </div>
+      </div>
+      <div style="height:8px;"></div>
+    </div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <div id="bottom-nav">
+    <button class="nav-btn active" id="nav-home" onclick="switchTab('home')">
+      <span class="ni">🏠</span>
+      <span class="nl">Home</span>
+      <div class="nav-dot"></div>
+    </button>
+    <button class="nav-btn" id="nav-summary" onclick="switchTab('summary')">
+      <span class="ni">📊</span>
+      <span class="nl">Summary</span>
+      <div class="nav-dot"></div>
+    </button>
+    <button class="nav-btn" id="nav-history" onclick="switchTab('history')">
+      <span class="ni">📋</span>
+      <span class="nl">History</span>
+      <div class="nav-dot"></div>
+    </button>
+  </div>
+</div>
+
+<!-- Mark Debt Modal -->
+<div class="overlay" id="modal-debt" style="display:none;" onclick="closeOnBg(event,'modal-debt')">
+  <div class="modal" style="max-height:88vh;overflow-y:auto;">
+    <div class="modal-handle"></div>
+    <h3 style="color:var(--red);">🔴 Mark as Debt</h3>
+    <p style="color:var(--muted);font-size:12px;margin-bottom:14px;">Select a transaction or source to mark as debt. Debt is tracked separately and deducted from your after-debt balance.</p>
+
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <button id="debt-tab-tx"  onclick="setDebtTab('tx')"  class="type-chip active-dep" style="flex:1;">💳 Transaction</button>
+      <button id="debt-tab-src" onclick="setDebtTab('src')" class="type-chip"             style="flex:1;">🏦 Source</button>
+    </div>
+
+    <!-- Transaction debt panel -->
+    <div id="debt-panel-tx">
+      <label>Select Transaction</label>
+      <div id="debt-tx-list" style="display:flex;flex-direction:column;gap:7px;max-height:220px;overflow-y:auto;margin-bottom:12px;"></div>
+      <label>Debt Note (optional)</label>
+      <input id="debt-tx-note" type="text" placeholder="e.g. Borrowed from Ahmed"
+        style="width:100%;background:var(--card2);border:1px solid #333;border-radius:12px;padding:11px 14px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;margin-bottom:14px;" />
+      <button onclick="saveDebtTransaction()" class="btn-primary red" style="width:100%;">Mark as Debt</button>
+    </div>
+
+    <!-- Source debt panel -->
+    <div id="debt-panel-src" style="display:none;">
+      <label>Select Source</label>
+      <div id="debt-src-list" style="display:flex;flex-direction:column;gap:7px;margin-bottom:12px;"></div>
+      <label>Debt Note (optional)</label>
+      <input id="debt-src-note" type="text" placeholder="e.g. Loan from bank"
+        style="width:100%;background:var(--card2);border:1px solid #333;border-radius:12px;padding:11px 14px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;margin-bottom:14px;" />
+      <button onclick="saveDebtSource()" class="btn-primary red" style="width:100%;">Mark Source as Debt</button>
+    </div>
+
+    <div style="height:6px;"></div>
+  </div>
+</div>
+
+<!-- ===== MODALS ===== -->
+
+<!-- Add Source Modal -->
+<div class="overlay" id="modal-source" style="display:none;" onclick="closeOnBg(event,'modal-source')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>➕ Add Money Source</h3>
+    <label>Source Name</label>
+    <input id="src-name" type="text" placeholder="e.g. Salary, Freelance, Gift" />
+    <label>Choose Icon</label>
+    <div class="icon-grid" id="icon-grid"></div>
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="closeModal('modal-source')">Cancel</button>
+      <button class="btn-primary purple" onclick="addSource()">Add Source</button>
+    </div>
+  </div>
+</div>
+
+<!-- Deposit Modal -->
+<div class="overlay" id="modal-deposit" style="display:none;" onclick="closeOnBg(event,'modal-deposit')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3 style="color:var(--green);">💵 Add Deposit</h3>
+    <label>Select Source</label>
+    <div class="source-opts" id="dep-sources"></div>
+    <label id="dep-amount-label">Amount</label>
+    <input id="dep-amount" class="big" type="number" inputmode="decimal" placeholder="0.00" />
+    <input id="dep-note" type="text" placeholder="Note (optional)" />
+    <label style="display:flex;align-items:center;justify-content:space-between;">Tags <span id="dep-tag-count" style="color:var(--dim);font-size:11px;">(optional)</span></label>
+    <div class="tag-grid" id="dep-tag-grid"></div>
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="closeModal('modal-deposit')">Cancel</button>
+      <button class="btn-primary green" onclick="addDeposit()">Deposit Money</button>
+    </div>
+  </div>
+</div>
+
+<!-- Spend Modal -->
+<div class="overlay" id="modal-spend" style="display:none;" onclick="closeOnBg(event,'modal-spend')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3 style="color:var(--red);">💸 Record Expense</h3>
+    <label>From Source</label>
+    <div class="source-opts" id="spt-sources"></div>
+    <label id="spt-amount-label">Amount</label>
+    <input id="spt-amount" class="big" type="number" inputmode="decimal" placeholder="0.00" />
+    <input id="spt-note" type="text" placeholder="What did you spend on? (optional)" />
+    <label style="display:flex;align-items:center;justify-content:space-between;">Tags <span id="spt-tag-count" style="color:var(--dim);font-size:11px;">(optional)</span></label>
+    <div class="tag-grid" id="spt-tag-grid"></div>
+    <!-- Debt toggle -->
+    <button id="spt-debt-toggle" onclick="toggleSpendDebt()" style="width:100%;background:rgba(255,107,107,0.08);border:1.5px solid rgba(255,107,107,0.2);border-radius:14px;padding:11px;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;-webkit-tap-highlight-color:transparent;margin-bottom:12px;text-align:left;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:16px;">⬜</span> <span>Mark as Debt</span>
+    </button>
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="closeModal('modal-spend')">Cancel</button>
+      <button class="btn-primary red" onclick="addSpend()">Record Expense</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Source Modal -->
+<div class="overlay" id="modal-edit-source" style="display:none;" onclick="closeOnBg(event,'modal-edit-source')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3 style="color:var(--accent);">✏️ Edit Source</h3>
+
+    <!-- Preview -->
+    <div id="edit-src-preview" style="display:flex;align-items:center;gap:12px;background:var(--card2);border-radius:14px;padding:12px 14px;margin-bottom:16px;">
+      <div id="edit-src-preview-icon" style="width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:22px;background:rgba(124,110,250,0.2);">💼</div>
+      <div>
+        <p id="edit-src-preview-name" style="color:#fff;font-size:15px;font-weight:700;">Source Name</p>
+        <p style="color:var(--muted);font-size:11px;margin-top:2px;">Preview</p>
+      </div>
+    </div>
+
+    <label>Source Name</label>
+    <input id="edit-src-name" type="text" maxlength="30"
+      oninput="updateEditSourcePreview()"
+      style="width:100%;background:var(--card2);border:1px solid #333;border-radius:14px;padding:13px 15px;color:var(--text);font-size:15px;font-family:'DM Sans',sans-serif;outline:none;margin-bottom:14px;" />
+
+    <label>Icon</label>
+    <div id="edit-src-icon-grid" class="icon-grid" style="margin-bottom:14px;"></div>
+
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="closeModal('modal-edit-source')">Cancel</button>
+      <button class="btn-primary purple" onclick="saveEditSource()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Folder Manager Modal -->
+<div class="overlay" id="modal-folders" style="display:none;" onclick="closeOnBg(event,'modal-folders')">
+  <div class="modal" style="max-height:88vh;overflow-y:auto;">
+    <div class="modal-handle"></div>
+    <h3 style="color:var(--yellow);">📁 Manage Folders</h3>
+    <p style="color:var(--muted);font-size:12px;line-height:1.6;margin-bottom:16px;">Group sources into folders to keep your home screen tidy.</p>
+
+    <!-- Existing folders -->
+    <div id="folder-list-mgr" style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px;"></div>
+
+    <!-- Create folder -->
+    <div style="height:1px;background:var(--border);margin-bottom:14px;"></div>
+    <p style="color:var(--accent);font-size:12px;font-weight:700;letter-spacing:0.5px;margin-bottom:10px;">➕ CREATE FOLDER</p>
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <input id="new-folder-emoji" type="text" placeholder="📁" maxlength="2"
+        style="width:46px;background:var(--card2);border:1px solid #333;border-radius:12px;padding:10px;color:var(--text);font-size:18px;outline:none;text-align:center;flex-shrink:0;" />
+      <input id="new-folder-name" type="text" placeholder="Folder name..." maxlength="24"
+        style="flex:1;background:var(--card2);border:1px solid #333;border-radius:12px;padding:11px 14px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;" />
+    </div>
+    <button onclick="createFolder()" style="width:100%;background:linear-gradient(135deg,#F7B731,#FDCB6E);border:none;border-radius:14px;padding:13px;color:#1a1a1a;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:6px;">Create Folder</button>
+    <div style="height:8px;"></div>
+  </div>
+</div>
+
+<!-- Assign Sources to Folder Modal -->
+<div class="overlay" id="modal-assign-folder" style="display:none;" onclick="closeOnBg(event,'modal-assign-folder')">
+  <div class="modal" style="max-height:88vh;overflow-y:auto;">
+    <div class="modal-handle"></div>
+    <h3 id="assign-folder-title" style="color:var(--yellow);">📁 Assign Sources</h3>
+    <p style="color:var(--muted);font-size:12px;margin-bottom:14px;">Tap sources to add/remove from this folder.</p>
+    <div id="assign-source-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px;"></div>
+    <button onclick="closeModal('modal-assign-folder')" style="width:100%;background:var(--card2);border:none;border-radius:14px;padding:13px;color:var(--muted);font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">Done</button>
+    <div style="height:6px;"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Manage Tags Modal -->
+<div class="overlay" id="modal-tags" style="display:none;" onclick="closeOnBg(event,'modal-tags')">
+  <div class="modal" style="max-height:88vh;overflow-y:auto;">
+    <div class="modal-handle"></div>
+    <h3 style="color:var(--accent);">🏷️ Manage Tags</h3>
+    <p style="color:var(--muted);font-size:12px;margin-bottom:14px;line-height:1.6;">Tap a tag to <strong style="color:#fff;">edit</strong> it. Tap ✕ to delete.</p>
+
+    <!-- Existing tags list -->
+    <div id="manage-tag-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;"></div>
+
+    <!-- Divider -->
+    <div style="height:1px;background:var(--border);margin-bottom:16px;"></div>
+
+    <!-- Create / Edit form -->
+    <div id="tag-form-title" style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:12px;letter-spacing:0.5px;">➕ CREATE NEW TAG</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
+      <input id="new-tag-emoji" type="text" placeholder="🏷️" maxlength="2"
+        style="width:48px;background:var(--card2);border:1px solid #333;border-radius:12px;padding:10px;color:var(--text);font-size:20px;outline:none;text-align:center;flex-shrink:0;" />
+      <input id="new-tag-name" type="text" placeholder="Tag name..." maxlength="20"
+        style="flex:1;background:var(--card2);border:1px solid #333;border-radius:12px;padding:11px 14px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;" />
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px;" id="tag-color-picker"></div>
+    <div style="display:flex;gap:10px;">
+      <button id="tag-form-cancel-btn" onclick="resetTagForm()" style="display:none;flex:1;background:var(--card2);border:none;border-radius:14px;padding:13px;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancel Edit</button>
+      <button id="tag-form-save-btn" onclick="saveTag()" style="flex:2;background:linear-gradient(135deg,#7C6EFA,#A855F7);border:none;border-radius:14px;padding:13px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">Create Tag</button>
+    </div>
+
+    <div style="height:8px;"></div>
+  </div>
+</div>
+
+<!-- Profile / Backup Sheet -->
+<div class="overlay" id="profile-sheet" style="display:none;" onclick="closeOnBg(event,'profile-sheet')">
+  <div class="modal" style="max-height:90vh;overflow-y:auto;">
+    <div class="modal-handle"></div>
+
+    <!-- Profile header with Google account info -->
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
+      <div id="ps-avatar" style="width:54px;height:54px;border-radius:27px;background:linear-gradient(135deg,#7C6EFA,#A855F7);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;overflow:hidden;">👤</div>
+      <div style="flex:1;min-width:0;">
+        <h3 id="ps-name" style="font-size:17px;font-weight:700;margin:0 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">My Profile</h3>
+        <p id="ps-gmail" style="color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Not signed in</p>
+      </div>
+      <button id="ps-sign-btn" onclick="handleSignInOut()" style="background:linear-gradient(135deg,#4285F4,#34A853);border:none;border-radius:12px;padding:8px 14px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;-webkit-tap-highlight-color:transparent;">Sign In</button>
+    </div>
+
+    <!-- Stats row -->
+    <div style="display:flex;gap:10px;margin-bottom:20px;">
+      <div style="flex:1;background:var(--card2);border-radius:14px;padding:12px;text-align:center;">
+        <p style="color:var(--muted);font-size:10px;font-weight:600;letter-spacing:0.5px;">SOURCES</p>
+        <h3 id="ps-src" style="font-size:20px;font-weight:700;margin-top:4px;">0</h3>
+      </div>
+      <div style="flex:1;background:var(--card2);border-radius:14px;padding:12px;text-align:center;">
+        <p style="color:var(--muted);font-size:10px;font-weight:600;letter-spacing:0.5px;">TRANSACTIONS</p>
+        <h3 id="ps-tx" style="font-size:20px;font-weight:700;margin-top:4px;">0</h3>
+      </div>
+      <div style="flex:1;background:var(--card2);border-radius:14px;padding:12px;text-align:center;">
+        <p style="color:var(--muted);font-size:10px;font-weight:600;letter-spacing:0.5px;">LAST BACKUP</p>
+        <p id="ps-last" style="font-size:11px;font-weight:600;margin-top:6px;color:var(--muted);">Never</p>
+      </div>
+    </div>
+
+    <!-- Drive Backup Section -->
+    <div style="height:1px;background:var(--border);margin-bottom:16px;"></div>
+    <h4 style="font-size:13px;font-weight:700;color:#4285F4;margin-bottom:14px;letter-spacing:0.5px;display:flex;align-items:center;gap:8px;">
+      <span style="font-size:16px;">🔵</span> GOOGLE DRIVE BACKUP
+    </h4>
+
+    <!-- Signed-out state -->
+    <div id="ps-signedout-ui">
+      <div style="background:rgba(66,133,244,0.08);border:1px solid rgba(66,133,244,0.25);border-radius:16px;padding:16px;margin-bottom:14px;">
+        <p style="color:#aaa;font-size:13px;line-height:1.7;text-align:center;">Sign in with Google to automatically backup and restore your data from Google Drive.</p>
+      </div>
+      <button onclick="handleSignInOut()" style="width:100%;background:linear-gradient(135deg,#4285F4,#34A853);border:none;border-radius:16px;padding:15px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:14px;">
+        <span style="font-size:18px;">🔵</span> Sign in with Google
+      </button>
+    </div>
+
+    <!-- Signed-in state -->
+    <div id="ps-signedin-ui" style="display:none;">
+      <button onclick="driveBackup()" id="ps-backup-btn" style="width:100%;background:linear-gradient(135deg,#4285F4,#34A853);border:none;border-radius:16px;padding:15px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;-webkit-tap-highlight-color:transparent;margin-bottom:10px;">
+        ☁️ Backup to Google Drive
+      </button>
+      <button onclick="driveRestore()" id="ps-restore-btn" style="width:100%;background:rgba(52,168,83,0.15);border:1px solid rgba(52,168,83,0.3);border-radius:16px;padding:14px;color:#34A853;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;-webkit-tap-highlight-color:transparent;margin-bottom:10px;">
+        📥 Restore from Google Drive
+      </button>
+      <div id="ps-drive-status" style="display:none;background:var(--card2);border-radius:12px;padding:12px;margin-bottom:10px;">
+        <p id="ps-drive-status-text" style="color:var(--muted);font-size:12px;text-align:center;"></p>
+      </div>
+    </div>
+
+    <!-- Divider -->
+    <div style="height:1px;background:var(--border);margin-bottom:16px;"></div>
+    <h4 style="font-size:13px;font-weight:700;color:var(--yellow);margin-bottom:10px;letter-spacing:0.5px;">💱 CURRENCY SETTINGS</h4>
+    <label style="color:var(--muted);font-size:13px;display:block;margin-bottom:7px;">Default USD → BDT Rate (1$ = ?৳)</label>
+    <div style="display:flex;gap:8px;margin-bottom:6px;">
+      <input id="ps-usd-rate" type="number" inputmode="decimal" placeholder="e.g. 110"
+        style="flex:1;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:11px 14px;color:var(--text);font-size:16px;font-family:'Space Mono',monospace;outline:none;" />
+      <button onclick="saveUsdRate()" style="background:rgba(247,183,49,0.2);border:1px solid rgba(247,183,49,0.35);border-radius:12px;padding:11px 16px;color:var(--yellow);font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;-webkit-tap-highlight-color:transparent;">Save</button>
+    </div>
+    <p style="color:var(--dim);font-size:11px;margin-bottom:16px;">Used as default when no per-transaction rate is set.</p>
+
+    <!-- Divider -->
+    <div style="height:1px;background:var(--border);margin-bottom:16px;"></div>
+    <h4 style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:10px;letter-spacing:0.5px;">💾 LOCAL BACKUP</h4>
+    <button onclick="downloadBackup()" style="width:100%;background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:13px;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;-webkit-tap-highlight-color:transparent;margin-bottom:18px;">
+      💾 Download .json File
+    </button>
+
+    <!-- Divider -->
+    <div style="height:1px;background:var(--border);margin-bottom:16px;"></div>
+    <h4 style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:10px;letter-spacing:0.5px;">📥 RESTORE FROM FILE</h4>
+    <textarea id="ps-restore-input" placeholder="Paste backup JSON here..."
+      style="width:100%;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:12px;color:var(--text);font-size:12px;font-family:'Space Mono',monospace;outline:none;resize:none;height:70px;line-height:1.5;margin-bottom:10px;"></textarea>
+    <button onclick="restoreFromJSONProfile()" style="width:100%;background:rgba(85,239,196,0.15);border:1px solid rgba(85,239,196,0.3);border-radius:14px;padding:13px;color:var(--green);font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;-webkit-tap-highlight-color:transparent;margin-bottom:6px;">
+      📥 Restore from JSON
+    </button>
+
+    <div style="height:8px;"></div>
+  </div>
+</div>
+
+<script>
+// ─── Data ───────────────────────────────────────────────
+const COLORS = [
+  {bg:"#FF6B6B"},{bg:"#4ECDC4"},{bg:"#F7B731"},
+  {bg:"#A29BFE"},{bg:"#FD79A8"},{bg:"#55EFC4"},
+  {bg:"#FDCB6E"},{bg:"#74B9FF"},
+];
+const ICONS = ["💼","🏦","💳","🎁","🏠","💰","📦","🛒","⚡","🎓","🍔","🚗","✈️","📱","👕","💊","🎮","📚"];
+
+// ─── Format ──────────────────────────────────────────────
+function fmt(n) {
+  return new Intl.NumberFormat('en-BD',{minimumFractionDigits:2,maximumFractionDigits:2}).format(n);
+}
+
+let sources = [];
+let transactions = [];
+let selectedDepSrc = null;
+let selectedSptSrc = null;
+let selectedIcon = "💼";
+
+// ─── Currency ────────────────────────────────────────────
+let activeCurrency = localStorage.getItem('mm_currency') || 'BDT'; // 'BDT' or 'USD'
+
+function currSymbol() { return activeCurrency === 'USD' ? '$' : '৳'; }
+function fmt2(n)      { return new Intl.NumberFormat('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}).format(n); }
+function fmtAmt(n)    { return currSymbol() + fmt(n); }
+
+// Each currency has its own separate sources + transactions
+function storageKey(type) {
+  return `mm_${type}_${activeCurrency}`; // e.g. mm_sources_BDT, mm_sources_USD
+}
+
+// ─── Persist ─────────────────────────────────────────────
+function save() {
+  try {
+    localStorage.setItem(storageKey('sources'),      JSON.stringify(sources));
+    localStorage.setItem(storageKey('transactions'),  JSON.stringify(transactions));
+  } catch(e) {}
+}
+function load() {
+  try {
+    const s = localStorage.getItem(storageKey('sources'));
+    const t = localStorage.getItem(storageKey('transactions'));
+    sources      = s ? JSON.parse(s) : [];
+    transactions = t ? JSON.parse(t) : [];
+  } catch(e) { sources = []; transactions = []; }
+}
+
+function setCurrency(c) {
+  activeCurrency = c;
+  localStorage.setItem('mm_currency', c);
+  document.getElementById('cur-bdt').className = 'cur-tab' + (c==='BDT'?' cur-active':'');
+  document.getElementById('cur-usd').className = 'cur-tab' + (c==='USD'?' cur-active':'');
+  // Update wallet badge
+  const badge = document.getElementById('cur-wallet-label');
+  if (badge) {
+    badge.textContent = c==='BDT' ? '৳ Taka Wallet' : '$ Dollar Wallet';
+    badge.style.color = c==='USD' ? '#F7B731' : 'var(--muted)';
+  }
+  // Reset modal selections & filters
+  selectedDepSrc = null;
+  selectedSptSrc = null;
+  filterSourceId = 'all';
+  filterType     = 'all';
+  filterYear     = '';
+  filterMonth    = '';
+  filterDay      = '';
+  filterTag      = 'all';
+  sortBy         = 'date';
+  sortDir        = 'desc';
+  // Load the correct wallet data
+  load();
+  renderAll();
+  if (document.getElementById('page-history').style.display !== 'none') renderHistory();
+}
+
+// ─── Tags ─────────────────────────────────────────────────
+const DEFAULT_TAGS = [
+  { id:'food',      name:'Food',       emoji:'🍔', color:'#FF6B6B' },
+  { id:'transport', name:'Transport',  emoji:'🚗', color:'#74B9FF' },
+  { id:'shopping',  name:'Shopping',   emoji:'🛒', color:'#A29BFE' },
+  { id:'health',    name:'Health',     emoji:'💊', color:'#55EFC4' },
+  { id:'bills',     name:'Bills',      emoji:'⚡', color:'#F7B731' },
+  { id:'education', name:'Education',  emoji:'🎓', color:'#FD79A8' },
+  { id:'salary',    name:'Salary',     emoji:'💼', color:'#4ECDC4' },
+  { id:'savings',   name:'Savings',    emoji:'🏦', color:'#FDCB6E' },
+];
+const TAG_COLORS = ['#FF6B6B','#4ECDC4','#F7B731','#A29BFE','#FD79A8','#55EFC4','#FDCB6E','#74B9FF','#E17055','#00CEC9'];
+
+function loadTags() {
+  const stored = localStorage.getItem('mm_tags');
+  return stored ? JSON.parse(stored) : [...DEFAULT_TAGS];
+}
+function saveTags(tags) {
+  localStorage.setItem('mm_tags', JSON.stringify(tags));
+}
+function getTag(id) { return loadTags().find(t => t.id === id); }
+
+let selectedDepTags = [];
+let selectedSptTags = [];
+let selectedNewTagColor = '#FF6B6B';
+let filterTag = 'all';
+
+function renderTagGrid(containerId, selectedTags, onToggle) {
+  const tags = loadTags();
+  const grid = document.getElementById(containerId);
+  if (!grid) return;
+  grid.innerHTML = '';
+  tags.forEach(tag => {
+    const isSel = selectedTags.includes(tag.id);
+    const btn = document.createElement('button');
+    btn.className = 'tag-pill';
+    btn.style.background = isSel ? tag.color+'33' : 'var(--card2)';
+    btn.style.color       = isSel ? tag.color : 'var(--muted)';
+    btn.style.border      = isSel ? `1.5px solid ${tag.color}` : '1.5px solid transparent';
+    btn.textContent = tag.emoji + ' ' + tag.name;
+    btn.onclick = () => onToggle(tag.id);
+    grid.appendChild(btn);
+  });
+  // Manage tags button
+  const mgr = document.createElement('button');
+  mgr.className = 'tag-manage-btn';
+  mgr.textContent = '⚙️ Manage';
+  mgr.onclick = () => openTagManager();
+  grid.appendChild(mgr);
+}
+
+function toggleDepTag(id) {
+  selectedDepTags = selectedDepTags.includes(id)
+    ? selectedDepTags.filter(t=>t!==id) : [...selectedDepTags, id];
+  renderTagGrid('dep-tag-grid', selectedDepTags, toggleDepTag);
+  updateTagCount('dep-tag-count', selectedDepTags.length);
+}
+function toggleSptTag(id) {
+  selectedSptTags = selectedSptTags.includes(id)
+    ? selectedSptTags.filter(t=>t!==id) : [...selectedSptTags, id];
+  renderTagGrid('spt-tag-grid', selectedSptTags, toggleSptTag);
+  updateTagCount('spt-tag-count', selectedSptTags.length);
+}
+function updateTagCount(elId, count) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (count === 0) {
+    el.textContent = '(optional)';
+    el.style.color = 'var(--dim)';
+    el.style.background = 'transparent';
+    el.style.padding = '0';
+    el.style.borderRadius = '0';
+  } else {
+    el.textContent = `${count} selected`;
+    el.style.color = 'var(--accent)';
+    el.style.background = 'rgba(124,110,250,0.15)';
+    el.style.padding = '2px 8px';
+    el.style.borderRadius = '10px';
+    el.style.fontWeight = '700';
+  }
+}
+
+function renderTagFilterRow() {
+  const scroll = document.getElementById('tag-filter-scroll');
+  if (!scroll) return;
+  scroll.innerHTML = '';
+  const tags = loadTags();
+  if (!tags.length) return;
+
+  // "All Tags" chip
+  const allBtn = document.createElement('button');
+  allBtn.className = 'tag-pill';
+  allBtn.style.background = filterTag==='all' ? 'rgba(124,110,250,0.2)' : 'var(--card2)';
+  allBtn.style.color       = filterTag==='all' ? 'var(--accent)' : 'var(--muted)';
+  allBtn.style.border      = filterTag==='all' ? '1.5px solid var(--accent)' : '1.5px solid transparent';
+  allBtn.textContent = '🏷️ All Tags';
+  allBtn.onclick = () => { filterTag='all'; renderTagFilterRow(); renderHistory(); };
+  scroll.appendChild(allBtn);
+
+  tags.forEach(tag => {
+    const isActive = filterTag===tag.id;
+    const btn = document.createElement('button');
+    btn.className = 'tag-pill';
+    btn.style.background = isActive ? tag.color+'33' : 'var(--card2)';
+    btn.style.color       = isActive ? tag.color : 'var(--muted)';
+    btn.style.border      = isActive ? `1.5px solid ${tag.color}` : '1.5px solid transparent';
+    btn.textContent = tag.emoji + ' ' + tag.name;
+    btn.onclick = () => { filterTag = isActive ? 'all' : tag.id; renderTagFilterRow(); renderHistory(); };
+    scroll.appendChild(btn);
+  });
+}
+
+let editingTagId = null;
+
+function openTagManager() {
+  editingTagId = null;
+  selectedNewTagColor = TAG_COLORS[0];
+  renderManageTagList();
+  renderTagColorPicker();
+  document.getElementById('new-tag-name').value  = '';
+  document.getElementById('new-tag-emoji').value = '';
+  const title = document.getElementById('tag-form-title');
+  const saveBtn = document.getElementById('tag-form-save-btn');
+  const cancelBtn = document.getElementById('tag-form-cancel-btn');
+  if (title) { title.textContent = '➕ CREATE NEW TAG'; title.style.color = 'var(--accent)'; }
+  if (saveBtn) saveBtn.textContent = 'Create Tag';
+  if (cancelBtn) cancelBtn.style.display = 'none';
+  openModal('modal-tags');
+}
+
+function resetTagForm() {
+  editingTagId = null;
+  document.getElementById('new-tag-name').value  = '';
+  document.getElementById('new-tag-emoji').value = '';
+  selectedNewTagColor = TAG_COLORS[0];
+  renderTagColorPicker();
+  const title = document.getElementById('tag-form-title');
+  const saveBtn = document.getElementById('tag-form-save-btn');
+  const cancelBtn = document.getElementById('tag-form-cancel-btn');
+  if (title) { title.textContent = '➕ CREATE NEW TAG'; title.style.color = 'var(--accent)'; }
+  if (saveBtn) saveBtn.textContent = 'Create Tag';
+  if (cancelBtn) cancelBtn.style.display = 'none';
+}
+
+function startEditTag(tag) {
+  editingTagId = tag.id;
+  document.getElementById('new-tag-name').value  = tag.name;
+  document.getElementById('new-tag-emoji').value = tag.emoji;
+  selectedNewTagColor = tag.color;
+  renderTagColorPicker();
+  const title = document.getElementById('tag-form-title');
+  const saveBtn = document.getElementById('tag-form-save-btn');
+  const cancelBtn = document.getElementById('tag-form-cancel-btn');
+  if (title) { title.textContent = `✏️ EDITING: ${tag.emoji} ${tag.name}`; title.style.color = tag.color; }
+  if (saveBtn) saveBtn.textContent = 'Save Changes';
+  if (cancelBtn) cancelBtn.style.display = 'block';
+  document.getElementById('new-tag-name').focus();
+}
+
+function saveTag() {
+  const name  = document.getElementById('new-tag-name').value.trim();
+  const emoji = document.getElementById('new-tag-emoji').value.trim() || '🏷️';
+  if (!name) { showToast('Enter a tag name!', 'warn'); return; }
+  const tags = loadTags();
+  if (editingTagId) {
+    const updated = tags.map(t => t.id === editingTagId ? {...t, name, emoji, color: selectedNewTagColor} : t);
+    saveTags(updated);
+    // Update display name in transactions (names stored for display are in tx.sourceName, tags just store ids — nothing to update in tx)
+    showToast(`"${name}" updated! ✅`);
+  } else {
+    if (tags.find(t => t.name.toLowerCase() === name.toLowerCase())) { showToast('Tag already exists!', 'warn'); return; }
+    tags.push({ id: 'tag_'+Date.now(), name, emoji, color: selectedNewTagColor });
+    saveTags(tags);
+    showToast(`"${name}" tag created!`);
+  }
+  resetTagForm();
+  renderManageTagList();
+  // Refresh open tag grids
+  renderTagGrid('dep-tag-grid', selectedDepTags, toggleDepTag);
+  renderTagGrid('spt-tag-grid', selectedSptTags, toggleSptTag);
+  if (document.getElementById('page-history').style.display !== 'none') renderHistory();
+}
+
+function addTag() { saveTag(); }
+
+function renderManageTagList() {
+  const tags = loadTags();
+  const grid = document.getElementById('manage-tag-list');
+  if (!grid) return;
+  grid.innerHTML = '';
+  if (!tags.length) {
+    grid.innerHTML = '<p style="color:var(--dim);font-size:12px;width:100%;margin-bottom:4px;">No tags yet — create one below.</p>';
+    return;
+  }
+  tags.forEach(tag => {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = `display:inline-flex;align-items:center;border-radius:20px;background:${tag.color}22;border:1.5px solid ${tag.color}55;overflow:hidden;cursor:pointer;`;
+
+    const editPart = document.createElement('button');
+    editPart.style.cssText = `background:none;border:none;padding:7px 10px 7px 12px;cursor:pointer;font-size:12px;font-weight:700;color:${tag.color};font-family:'DM Sans',sans-serif;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;gap:4px;`;
+    editPart.innerHTML = `${tag.emoji} ${tag.name} <span style="font-size:11px;opacity:0.6;">✏️</span>`;
+    editPart.onclick = () => startEditTag(tag);
+
+    const delPart = document.createElement('button');
+    delPart.style.cssText = `background:${tag.color}33;border:none;border-left:1px solid ${tag.color}44;padding:7px 11px;cursor:pointer;font-size:13px;color:${tag.color};-webkit-tap-highlight-color:transparent;`;
+    delPart.textContent = '✕';
+    delPart.title = 'Delete tag';
+    delPart.onclick = (e) => {
+      e.stopPropagation();
+      if (!confirm(`Delete "${tag.name}"? It will be removed from all transactions.`)) return;
+      const updated = loadTags().filter(t => t.id !== tag.id);
+      saveTags(updated);
+      transactions = transactions.map(tx => ({...tx, tags: (tx.tags||[]).filter(tid=>tid!==tag.id)}));
+      save();
+      if (editingTagId === tag.id) resetTagForm();
+      renderManageTagList();
+      if (document.getElementById('page-history').style.display !== 'none') renderHistory();
+      showToast(`"${tag.name}" deleted.`, 'warn');
+    };
+
+    wrap.appendChild(editPart);
+    wrap.appendChild(delPart);
+    grid.appendChild(wrap);
+  });
+}
+
+function renderTagColorPicker() {
+  const picker = document.getElementById('tag-color-picker');
+  if (!picker) return;
+  picker.innerHTML = '';
+  TAG_COLORS.forEach(c => {
+    const btn = document.createElement('button');
+    btn.style.cssText = `width:28px;height:28px;border-radius:50%;background:${c};border:${selectedNewTagColor===c?'3px solid #fff':'2px solid transparent'};cursor:pointer;-webkit-tap-highlight-color:transparent;flex-shrink:0;`;
+    btn.onclick = () => { selectedNewTagColor = c; renderTagColorPicker(); };
+    picker.appendChild(btn);
+  });
+}
+
+// ─── Toast ───────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = ''; }, 2400);
+}
+
+// ─── Clock ───────────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  let h = now.getHours(), m = now.getMinutes();
+  document.getElementById('clock').textContent =
+    `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
+}
+setInterval(updateClock, 10000); updateClock();
+
+// ─── Tab Switch ──────────────────────────────────────────
+function switchTab(tab) {
+  document.getElementById('page-home').style.display    = tab==='home'    ? 'block' : 'none';
+  document.getElementById('page-history').style.display = tab==='history' ? 'block' : 'none';
+  document.getElementById('page-summary').style.display = tab==='summary' ? 'block' : 'none';
+  ['home','history','summary'].forEach(t => {
+    const el = document.getElementById('nav-'+t);
+    if (el) el.className = 'nav-btn' + (tab===t ? ' active' : '');
+  });
+  document.getElementById('scroll-area').scrollTop = 0;
+  if (tab==='history') renderHistory();
+  if (tab==='summary') renderSummary();
+}
+
+function openProfileSheet() {
+  try {
+    document.getElementById('ps-src').textContent = sources.length;
+    document.getElementById('ps-tx').textContent  = transactions.length;
+    const last = localStorage.getItem('mm_last_backup');
+    document.getElementById('ps-last').textContent = last
+      ? new Date(last).toLocaleDateString('en-BD',{day:'numeric',month:'short',year:'numeric'})
+      : 'Never';
+    if (!gAccessToken) {
+      const saved = localStorage.getItem('mm_g_profile');
+      if (saved) { try { gUserProfile = JSON.parse(saved); } catch(e){} }
+    }
+    const el = document.getElementById('ps-drive-status');
+    if (el) el.style.display = 'none';
+    const ri = document.getElementById('ps-restore-input');
+    if (ri) ri.value = '';
+    updateProfileUI();
+  } catch(e) { console.warn('openProfileSheet error:', e); }
+  openModal('profile-sheet');
+}
+
+// ─── Modals ──────────────────────────────────────────────
+function openModal(id) {
+  document.getElementById(id).style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function closeModal(id) {
+  document.getElementById(id).style.display = 'none';
+  document.body.style.overflow = '';
+}
+function closeOnBg(e, id) {
+  if (e.target.classList.contains('overlay')) closeModal(id);
+}
+
+// ─── Icon Grid ───────────────────────────────────────────
+function buildIconGrid() {
+  const grid = document.getElementById('icon-grid');
+  grid.innerHTML = '';
+  ICONS.forEach(ic => {
+    const btn = document.createElement('button');
+    btn.className = 'icon-opt' + (selectedIcon===ic ? ' sel' : '');
+    btn.textContent = ic;
+    btn.onclick = () => {
+      selectedIcon = ic;
+      buildIconGrid();
+    };
+    grid.appendChild(btn);
+  });
+}
+
+// ─── Add Source ──────────────────────────────────────────
+function addSource() {
+  const name = document.getElementById('src-name').value.trim();
+  if (!name) { showToast('Enter a source name!', 'warn'); return; }
+  const color = COLORS[sources.length % COLORS.length];
+  sources.push({ id: Date.now(), name, icon: selectedIcon, color, totalDeposited: 0, totalSpent: 0 });
+  save();
+  document.getElementById('src-name').value = '';
+  selectedIcon = '💼';
+  closeModal('modal-source');
+  renderAll();
+  showToast(`"${name}" added!`);
+}
+
+// ─── Open Deposit / Spend ─────────────────────────────────
+function openDeposit() {
+  if (!sources.length) { showToast('Add a source first!', 'warn'); return; }
+  selectedDepSrc = null;
+  selectedDepTags = [];
+  document.getElementById('dep-amount').value = '';
+  document.getElementById('dep-note').value = '';
+  document.getElementById('dep-amount-label').textContent = `Amount (${currSymbol()})`;
+  renderSourceOpts('dep-sources', 'dep');
+  renderTagGrid('dep-tag-grid', selectedDepTags, toggleDepTag);
+  updateTagCount('dep-tag-count', 0);
+  openModal('modal-deposit');
+}
+function openSpend() {
+  if (!sources.length) { showToast('Add a source first!', 'warn'); return; }
+  selectedSptSrc = null;
+  selectedSptTags = [];
+  spendIsDebt = false;
+  document.getElementById('spt-amount').value = '';
+  document.getElementById('spt-note').value = '';
+  document.getElementById('spt-amount-label').textContent = `Amount (${currSymbol()})`;
+  const dtBtn = document.getElementById('spt-debt-toggle');
+  if (dtBtn) {
+    dtBtn.innerHTML = `<span style="font-size:16px;">⬜</span> <span>Mark as Debt</span>`;
+    dtBtn.style.background  = 'rgba(255,107,107,0.08)';
+    dtBtn.style.borderColor = 'rgba(255,107,107,0.2)';
+  }
+  renderSourceOpts('spt-sources', 'spt');
+  renderTagGrid('spt-tag-grid', selectedSptTags, toggleSptTag);
+  updateTagCount('spt-tag-count', 0);
+  openModal('modal-spend');
+}
+function renderSourceOpts(containerId, type) {
+  const c = document.getElementById(containerId);
+  c.innerHTML = '';
+  const sym = currSymbol();
+  sources.forEach(src => {
+    const bal = src.totalDeposited - src.totalSpent;
+    const isSel = type==='dep' ? selectedDepSrc?.id===src.id : selectedSptSrc?.id===src.id;
+    const div = document.createElement('div');
+    div.className = 'source-opt' + (isSel ? (type==='dep' ? ' sel-dep' : ' sel-spt') : '');
+    div.innerHTML = `<span style="font-size:20px;">${src.icon}</span><span class="sn">${src.name}</span><span class="sb">${sym}${fmt(bal)}</span>`;
+    div.onclick = () => {
+      if (type==='dep') selectedDepSrc = src;
+      else selectedSptSrc = src;
+      renderSourceOpts(containerId, type);
+    };
+    c.appendChild(div);
+  });
+}
+
+// ─── Add Deposit ──────────────────────────────────────────
+function addDeposit() {
+  const amt  = parseFloat(document.getElementById('dep-amount').value);
+  const note = document.getElementById('dep-note').value.trim();
+  if (!selectedDepSrc) { showToast('Select a source!', 'warn'); return; }
+  if (isNaN(amt) || amt <= 0) { showToast('Enter a valid amount!', 'warn'); return; }
+  sources = sources.map(s => s.id===selectedDepSrc.id ? {...s, totalDeposited: s.totalDeposited+amt} : s);
+  transactions.unshift({
+    id: Date.now(), type:'deposit',
+    sourceId: selectedDepSrc.id, sourceName: selectedDepSrc.name, sourceIcon: selectedDepSrc.icon,
+    amount: amt, currency: activeCurrency, note,
+    tags: [...selectedDepTags],
+    date: new Date().toISOString()
+  });
+  save();
+  closeModal('modal-deposit');
+  renderAll();
+  showToast(`${currSymbol()}${fmt(amt)} deposited!`);
+}
+
+let spendIsDebt = false;
+
+function toggleSpendDebt() {
+  spendIsDebt = !spendIsDebt;
+  const btn = document.getElementById('spt-debt-toggle');
+  if (!btn) return;
+  btn.innerHTML = spendIsDebt
+    ? `<span style="font-size:16px;">🔴</span> <span style="color:var(--red);">Marked as Debt</span>`
+    : `<span style="font-size:16px;">⬜</span> <span>Mark as Debt</span>`;
+  btn.style.background = spendIsDebt ? 'rgba(255,107,107,0.18)' : 'rgba(255,107,107,0.08)';
+  btn.style.borderColor = spendIsDebt ? 'rgba(255,107,107,0.5)' : 'rgba(255,107,107,0.2)';
+}
+
+// ─── Add Spend ────────────────────────────────────────────
+function addSpend() {
+  const amt  = parseFloat(document.getElementById('spt-amount').value);
+  const note = document.getElementById('spt-note').value.trim();
+  if (!selectedSptSrc) { showToast('Select a source!', 'warn'); return; }
+  if (isNaN(amt) || amt <= 0) { showToast('Enter a valid amount!', 'warn'); return; }
+  sources = sources.map(s => s.id===selectedSptSrc.id ? {...s, totalSpent: s.totalSpent+amt} : s);
+  transactions.unshift({
+    id: Date.now(), type:'spend',
+    sourceId: selectedSptSrc.id, sourceName: selectedSptSrc.name, sourceIcon: selectedSptSrc.icon,
+    amount: amt, currency: activeCurrency, note,
+    tags: [...selectedSptTags],
+    isDebt: spendIsDebt,
+    date: new Date().toISOString()
+  });
+  save();
+  closeModal('modal-spend');
+  renderAll();
+  showToast(spendIsDebt ? `🔴 Debt of ${currSymbol()}${fmt(amt)} recorded!` : `${currSymbol()}${fmt(amt)} spent!`, 'warn');
+}
+
+// ─── Delete Source ────────────────────────────────────────
+function deleteSource(id) {
+  if (!confirm('Delete this source and its data?')) return;
+  sources = sources.filter(s => s.id !== id);
+  transactions = transactions.filter(t => t.sourceId !== id);
+  // Remove from folders too
+  const fls = loadFolders().map(f => ({...f, sourceIds: f.sourceIds.filter(sid => sid !== id)}));
+  saveFolders(fls);
+  save();
+  renderAll();
+  showToast('Source removed.');
+}
+
+// ─── Edit Source ──────────────────────────────────────────
+let editingSourceId = null;
+let editingSrcIcon  = '💼';
+
+function openEditSource(id) {
+  const src = sources.find(s => s.id === id);
+  if (!src) return;
+  editingSourceId = id;
+  editingSrcIcon  = src.icon;
+  document.getElementById('edit-src-name').value = src.name;
+  buildEditSrcIconGrid();
+  updateEditSourcePreview();
+  openModal('modal-edit-source');
+}
+
+function buildEditSrcIconGrid() {
+  const grid = document.getElementById('edit-src-icon-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  ICONS.forEach(ic => {
+    const btn = document.createElement('button');
+    btn.className = 'icon-opt' + (editingSrcIcon===ic ? ' sel' : '');
+    btn.textContent = ic;
+    btn.onclick = () => { editingSrcIcon = ic; buildEditSrcIconGrid(); updateEditSourcePreview(); };
+    grid.appendChild(btn);
+  });
+}
+
+function updateEditSourcePreview() {
+  const name  = document.getElementById('edit-src-name')?.value.trim() || 'Source Name';
+  const src   = sources.find(s => s.id === editingSourceId);
+  const color = src ? src.color.bg : '#7C6EFA';
+  const ni = document.getElementById('edit-src-preview-icon');
+  const nn = document.getElementById('edit-src-preview-name');
+  if (ni) { ni.textContent = editingSrcIcon; ni.style.background = color+'33'; }
+  if (nn) nn.textContent = name;
+}
+
+function saveEditSource() {
+  const name = document.getElementById('edit-src-name').value.trim();
+  if (!name) { showToast('Enter a source name!', 'warn'); return; }
+  sources = sources.map(s => s.id === editingSourceId ? {...s, name, icon: editingSrcIcon} : s);
+  // Update cached name/icon in existing transactions
+  transactions = transactions.map(t => t.sourceId === editingSourceId
+    ? {...t, sourceName: name, sourceIcon: editingSrcIcon} : t);
+  save();
+  closeModal('modal-edit-source');
+  renderAll();
+  showToast('Source updated! ✅');
+}
+
+// ─── Quick Deposit / Spend from Source Card ───────────────
+function openDepositForSource(srcId) {
+  const src = sources.find(s => s.id === srcId);
+  if (!src) return;
+  selectedDepSrc  = src;
+  selectedDepTags = [];
+  document.getElementById('dep-amount').value = '';
+  document.getElementById('dep-note').value   = '';
+  document.getElementById('dep-amount-label').textContent = `Amount (${currSymbol()})`;
+  renderSourceOpts('dep-sources', 'dep');
+  renderTagGrid('dep-tag-grid', selectedDepTags, toggleDepTag);
+  updateTagCount('dep-tag-count', 0);
+  openModal('modal-deposit');
+}
+
+function openSpendForSource(srcId) {
+  const src = sources.find(s => s.id === srcId);
+  if (!src) return;
+  selectedSptSrc  = src;
+  selectedSptTags = [];
+  document.getElementById('spt-amount').value = '';
+  document.getElementById('spt-note').value   = '';
+  document.getElementById('spt-amount-label').textContent = `Amount (${currSymbol()})`;
+  renderSourceOpts('spt-sources', 'spt');
+  renderTagGrid('spt-tag-grid', selectedSptTags, toggleSptTag);
+  updateTagCount('spt-tag-count', 0);
+  openModal('modal-spend');
+}
+
+// ─── Folders ─────────────────────────────────────────────
+let folderOpenState = {}; // folderId -> bool
+
+function loadFolders() {
+  try { return JSON.parse(localStorage.getItem('mm_folders') || '[]'); } catch(e) { return []; }
+}
+function saveFolders(folders) {
+  localStorage.setItem('mm_folders', JSON.stringify(folders));
+}
+
+function createFolder() {
+  const name  = document.getElementById('new-folder-name').value.trim();
+  const emoji = document.getElementById('new-folder-emoji').value.trim() || '📁';
+  if (!name) { showToast('Enter a folder name!', 'warn'); return; }
+  const folders = loadFolders();
+  if (folders.find(f => f.name.toLowerCase() === name.toLowerCase())) { showToast('Folder already exists!', 'warn'); return; }
+  folders.push({ id: 'folder_'+Date.now(), name, emoji, sourceIds: [] });
+  saveFolders(folders);
+  document.getElementById('new-folder-name').value  = '';
+  document.getElementById('new-folder-emoji').value = '';
+  renderFolderManagerList();
+  renderSources();
+  showToast(`"${name}" folder created!`);
+}
+
+function deleteFolder(id) {
+  if (!confirm('Delete this folder? Sources inside will move back to the main list.')) return;
+  const updated = loadFolders().filter(f => f.id !== id);
+  saveFolders(updated);
+  delete folderOpenState[id];
+  renderFolderManagerList();
+  renderSources();
+  showToast('Folder deleted.');
+}
+
+function openFolderManager() {
+  renderFolderManagerList();
+  document.getElementById('new-folder-name').value  = '';
+  document.getElementById('new-folder-emoji').value = '';
+  openModal('modal-folders');
+}
+
+function renderFolderManagerList() {
+  const folders = loadFolders();
+  const c = document.getElementById('folder-list-mgr');
+  if (!c) return;
+  c.innerHTML = '';
+  if (!folders.length) {
+    c.innerHTML = '<p style="color:var(--dim);font-size:12px;">No folders yet.</p>';
+    return;
+  }
+  folders.forEach(f => {
+    const row = document.createElement('div');
+    row.style.cssText = `display:flex;align-items:center;background:var(--card2);border-radius:14px;padding:11px 14px;gap:10px;`;
+    row.innerHTML = `
+      <span style="font-size:20px;">${f.emoji}</span>
+      <div style="flex:1;min-width:0;">
+        <p style="color:#fff;font-size:14px;font-weight:700;">${f.name}</p>
+        <p style="color:var(--dim);font-size:11px;margin-top:2px;">${f.sourceIds.length} source${f.sourceIds.length!==1?'s':''}</p>
+      </div>
+      <button onclick="openAssignFolder('${f.id}')" style="background:rgba(247,183,49,0.15);border:1px solid rgba(247,183,49,0.3);border-radius:10px;padding:6px 10px;color:var(--yellow);font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;-webkit-tap-highlight-color:transparent;">Assign</button>
+      <button onclick="deleteFolder('${f.id}')" style="background:rgba(255,107,107,0.12);border:none;border-radius:10px;padding:6px 9px;color:var(--red);font-size:14px;cursor:pointer;-webkit-tap-highlight-color:transparent;">🗑</button>
+    `;
+    c.appendChild(row);
+  });
+}
+
+function openAssignFolder(folderId) {
+  const folders = loadFolders();
+  const folder  = folders.find(f => f.id === folderId);
+  if (!folder) return;
+  document.getElementById('assign-folder-title').textContent = `${folder.emoji} ${folder.name}`;
+  const list = document.getElementById('assign-source-list');
+  list.innerHTML = '';
+  // Get all sourceIds in OTHER folders
+  const otherFolderSourceIds = folders.filter(f=>f.id!==folderId).flatMap(f=>f.sourceIds);
+  sources.forEach(src => {
+    const inThis   = folder.sourceIds.includes(src.id);
+    const inOther  = otherFolderSourceIds.includes(src.id);
+    const row = document.createElement('div');
+    row.style.cssText = `display:flex;align-items:center;background:${inThis?src.color.bg+'22':'var(--card2)'};border:1.5px solid ${inThis?src.color.bg+'55':'transparent'};border-radius:14px;padding:12px 14px;gap:10px;cursor:pointer;-webkit-tap-highlight-color:transparent;`;
+    row.innerHTML = `
+      <span style="font-size:20px;">${src.icon}</span>
+      <div style="flex:1;">
+        <p style="color:#fff;font-size:14px;font-weight:600;">${src.name}</p>
+        ${inOther&&!inThis ? '<p style="color:var(--dim);font-size:10px;">In another folder</p>' : ''}
+      </div>
+      <span style="font-size:18px;">${inThis?'✅':'⬜'}</span>
+    `;
+    row.onclick = () => {
+      const fls = loadFolders();
+      const fi  = fls.findIndex(f=>f.id===folderId);
+      if (fi < 0) return;
+      // Remove from all folders first if being added (one source, one folder)
+      if (!fls[fi].sourceIds.includes(src.id)) {
+        fls.forEach(f => { f.sourceIds = f.sourceIds.filter(id=>id!==src.id); });
+        fls[fi].sourceIds.push(src.id);
+      } else {
+        fls[fi].sourceIds = fls[fi].sourceIds.filter(id=>id!==src.id);
+      }
+      saveFolders(fls);
+      openAssignFolder(folderId);
+      renderSources();
+    };
+    list.appendChild(row);
+  });
+  openModal('modal-assign-folder');
+}
+
+// ─── Render ───────────────────────────────────────────────
+function renderAll() {
+  renderBalances();
+  renderSources();
+}
+function renderBalances() {
+  const dep = sources.reduce((a,s)=>a+s.totalDeposited,0);
+  const spt = sources.reduce((a,s)=>a+s.totalSpent,0);
+  const bal = dep - spt;
+  const sym = currSymbol();
+  document.getElementById('net-balance').textContent = sym+fmt(bal);
+  document.getElementById('total-dep').textContent   = sym+fmt(dep);
+  document.getElementById('total-spt').textContent   = sym+fmt(spt);
+  document.getElementById('net-balance').style.color = bal < 0 ? 'var(--red)' : '#fff';
+  document.getElementById('source-count').textContent = `Across ${sources.length} source${sources.length!==1?'s':''}`;
+  document.getElementById('src-count-label').textContent = `${sources.length} total`;
+}
+function renderSources() {
+  const list  = document.getElementById('source-list');
+  const empty = document.getElementById('src-empty');
+  Array.from(list.children).forEach(c => { if (c !== empty) c.remove(); });
+  if (!sources.length) { empty.style.display='block'; return; }
+  empty.style.display='none';
+
+  const sym     = currSymbol();
+  const query   = (document.getElementById('src-search')?.value || '').toLowerCase().trim();
+  const folders = loadFolders();
+  const folderSourceIds = new Set(folders.flatMap(f => f.sourceIds));
+
+  // Sort: most recently used (last transaction) first, then by id desc
+  const txBySource = {};
+  transactions.forEach(tx => {
+    if (!txBySource[tx.sourceId] || tx.date > txBySource[tx.sourceId]) {
+      txBySource[tx.sourceId] = tx.date;
+    }
+  });
+  const sortedSources = [...sources].sort((a,b) => {
+    const ta = txBySource[a.id] || '';
+    const tb = txBySource[b.id] || '';
+    if (ta && tb) return tb.localeCompare(ta);
+    if (ta) return -1;
+    if (tb) return  1;
+    return b.id - a.id;
+  });
+
+  function buildSourceCard(src) {
+    const bal      = src.totalDeposited - src.totalSpent;
+    const pct      = src.totalDeposited > 0 ? Math.min(100,(src.totalSpent/src.totalDeposited)*100) : 0;
+    const barColor = pct>80 ? 'var(--red)' : pct>50 ? 'var(--yellow)' : 'var(--green)';
+    const card = document.createElement('div');
+    card.className = 'source-card';
+    card.style.borderLeft = `3px solid ${src.color.bg}`;
+    const lastTx = txBySource[src.id] ? new Date(txBySource[src.id]).toLocaleDateString('en-BD',{day:'numeric',month:'short'}) : null;
+    card.innerHTML = `
+      <div class="source-top">
+        <div class="source-icon" style="background:${src.color.bg}22;">${src.icon}</div>
+        <div class="source-info">
+          <h4>${src.name}</h4>
+          <p style="color:${bal>=0?'var(--green)':'var(--red)'};">${sym}${fmt(bal)}</p>
+          ${lastTx ? `<p style="color:var(--dim);font-size:10px;margin-top:1px;">Last: ${lastTx}</p>` : ''}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0;">
+          <button class="del-btn" style="background:rgba(124,110,250,0.15);border-radius:10px;padding:5px 8px;font-size:14px;" onclick="openEditSource(${src.id})">✏️</button>
+          <button class="del-btn" onclick="deleteSource(${src.id})">🗑</button>
+        </div>
+      </div>
+      <div class="source-stats">
+        <div class="source-stat d"><p>DEPOSITED</p><h5>${sym}${fmt(src.totalDeposited)}</h5></div>
+        <div class="source-stat s"><p>SPENT</p><h5>${sym}${fmt(src.totalSpent)}</h5></div>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" style="width:${pct}%;background:${barColor};"></div>
+      </div>
+      <p class="progress-label">${pct.toFixed(0)}% spent</p>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="src-action-btn dep-btn" onclick="openDepositForSource(${src.id})">💵 Deposit</button>
+        <button class="src-action-btn spt-btn" onclick="openSpendForSource(${src.id})">💸 Spend</button>
+      </div>
+    `;
+    return card;
+  }
+
+  // Search mode — flat list, no folders
+  if (query) {
+    const matched = sortedSources.filter(s => s.name.toLowerCase().includes(query));
+    if (!matched.length) {
+      const noResult = document.createElement('div');
+      noResult.className = 'empty-state';
+      noResult.innerHTML = '<div class="ei">🔍</div><p>No sources match your search.</p>';
+      list.appendChild(noResult);
+      return;
+    }
+    matched.forEach(src => list.appendChild(buildSourceCard(src)));
+    return;
+  }
+
+  // Render folders first
+  folders.forEach(folder => {
+    const folderSources = sortedSources.filter(s => folder.sourceIds.includes(s.id));
+    if (!folderSources.length) return; // skip empty folders
+
+    const isOpen = folderOpenState[folder.id] !== false;
+    const folderEl = document.createElement('div');
+    folderEl.className = 'folder-card';
+
+    const totalBal = folderSources.reduce((a,s)=>a+(s.totalDeposited-s.totalSpent),0);
+
+    const header = document.createElement('div');
+    header.className = 'folder-header';
+    header.innerHTML = `
+      <div style="width:36px;height:36px;border-radius:11px;background:rgba(247,183,49,0.18);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">${folder.emoji}</div>
+      <div style="flex:1;min-width:0;">
+        <p style="color:#fff;font-size:14px;font-weight:700;">${folder.name}</p>
+        <p style="color:var(--dim);font-size:11px;">${folderSources.length} source${folderSources.length!==1?'s':''} · ${sym}${fmt(totalBal)}</p>
+      </div>
+      <span class="folder-chevron${isOpen?' open':''}">▶</span>
+    `;
+    header.onclick = () => {
+      const currently = folderOpenState[folder.id] !== false;
+      folderOpenState[folder.id] = !currently;
+      const nowOpen = folderOpenState[folder.id];
+      body.className  = 'folder-body' + (nowOpen ? '' : ' collapsed');
+      header.querySelector('.folder-chevron').className = 'folder-chevron' + (nowOpen ? ' open' : '');
+    };
+
+    const body = document.createElement('div');
+    body.className = 'folder-body' + (isOpen ? '' : ' collapsed');
+    folderSources.forEach(src => body.appendChild(buildSourceCard(src)));
+
+    folderEl.appendChild(header);
+    folderEl.appendChild(body);
+    list.appendChild(folderEl);
+  });
+
+  // Render ungrouped sources
+  const ungrouped = sortedSources.filter(s => !folderSourceIds.has(s.id));
+  if (ungrouped.length && folders.length) {
+    const label = document.createElement('p');
+    label.style.cssText = 'color:var(--dim);font-size:11px;font-weight:700;letter-spacing:0.5px;padding:4px 4px 0;';
+    label.textContent = 'UNGROUPED';
+    list.appendChild(label);
+  }
+  ungrouped.forEach(src => list.appendChild(buildSourceCard(src)));
+}
+// ─── Filter State ─────────────────────────────────────────
+let filterSourceId = 'all';
+let filterType = 'all';
+let filterYear  = '';
+let filterMonth = '';
+let filterDay   = '';
+let filterTag   = 'all';
+
+// ─── Sort State ───────────────────────────────────────────
+let sortBy  = 'date';   // 'date' | 'amount' | 'name'
+let sortDir = 'desc';   // 'desc' | 'asc'
+
+function setSort(field) {
+  if (sortBy === field) {
+    // Same field — toggle direction
+    toggleSortDir();
+    return;
+  }
+  sortBy = field;
+  ['date','amount','name'].forEach(f => {
+    const el = document.getElementById('sort-'+f);
+    if (el) el.className = 'sort-chip' + (f===field ? ' active-sort' : '');
+  });
+  renderHistory();
+}
+
+function toggleSortDir() {
+  sortDir = sortDir === 'desc' ? 'asc' : 'desc';
+  const btn = document.getElementById('sort-dir-btn');
+  if (btn) {
+    btn.textContent = sortDir === 'desc' ? '↓' : '↑';
+    btn.style.color  = sortDir === 'asc' ? 'var(--accent)' : 'var(--text)';
+    btn.style.background = sortDir === 'asc' ? 'rgba(124,110,250,0.15)' : 'var(--card2)';
+    btn.style.border = sortDir === 'asc' ? '1px solid rgba(124,110,250,0.3)' : 'none';
+  }
+  renderHistory();
+}
+
+function applySort(arr) {
+  return [...arr].sort((a, b) => {
+    let cmp = 0;
+    if (sortBy === 'date') {
+      cmp = new Date(a.date) - new Date(b.date);
+    } else if (sortBy === 'amount') {
+      cmp = a.amount - b.amount;
+    } else if (sortBy === 'name') {
+      cmp = a.sourceName.localeCompare(b.sourceName);
+    }
+    return sortDir === 'desc' ? -cmp : cmp;
+  });
+}
+
+function onDateFilterChange() {
+  filterYear  = document.getElementById('filter-year').value;
+  filterMonth = document.getElementById('filter-month').value;
+  filterDay   = document.getElementById('filter-day').value;
+
+  // Highlight active selects
+  ['filter-year','filter-month','filter-day'].forEach(id => {
+    const el = document.getElementById(id);
+    el.className = el.value ? 'active' : '';
+  });
+
+  // Populate day options based on year+month selection
+  populateDayOptions();
+
+  // Show/hide clear button
+  const anyDate = filterYear || filterMonth || filterDay;
+  document.getElementById('date-clear-btn').className = 'date-clear-btn' + (anyDate ? ' show' : '');
+
+  renderHistory();
+}
+
+function clearDateFilter() {
+  filterYear = ''; filterMonth = ''; filterDay = '';
+  document.getElementById('filter-year').value = '';
+  document.getElementById('filter-month').value = '';
+  document.getElementById('filter-day').value = '';
+  ['filter-year','filter-month','filter-day'].forEach(id => {
+    document.getElementById(id).className = '';
+  });
+  document.getElementById('date-clear-btn').className = 'date-clear-btn';
+  renderHistory();
+}
+
+function populateYearOptions() {
+  const sel = document.getElementById('filter-year');
+  const currentVal = sel.value;
+  // Gather unique years from transactions
+  const years = [...new Set(transactions.map(t => new Date(t.date).getFullYear()))].sort((a,b)=>b-a);
+  sel.innerHTML = '<option value="">All Years</option>';
+  years.forEach(y => {
+    const opt = document.createElement('option');
+    opt.value = y; opt.textContent = y;
+    if (String(y) === currentVal) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function populateDayOptions() {
+  const sel = document.getElementById('filter-day');
+  const currentVal = sel.value;
+  sel.innerHTML = '<option value="">All Days</option>';
+
+  let maxDays = 31;
+  if (filterYear && filterMonth !== '') {
+    maxDays = new Date(parseInt(filterYear), parseInt(filterMonth)+1, 0).getDate();
+  } else if (filterMonth !== '') {
+    // no year — show 31 days generically
+    maxDays = 31;
+  }
+
+  for (let d = 1; d <= maxDays; d++) {
+    const opt = document.createElement('option');
+    opt.value = d; opt.textContent = d;
+    if (String(d) === currentVal) opt.selected = true;
+    sel.appendChild(opt);
+  }
+}
+
+function setSourceFilter(id) {
+  filterSourceId = id;
+  renderFilterChips();
+  renderHistory();
+}
+function setTypeFilter(type) {
+  filterType = type;
+  // update type chip styles
+  ['all','dep','spt'].forEach(k => {
+    const el = document.getElementById('type-'+k);
+    el.className = 'type-chip';
+  });
+  if (type==='all')     document.getElementById('type-all').className = 'type-chip active-all';
+  if (type==='deposit') document.getElementById('type-dep').className = 'type-chip active-dep';
+  if (type==='spend')   document.getElementById('type-spt').className = 'type-chip active-spt';
+  renderHistory();
+}
+
+function renderFilterChips() {
+  const container = document.getElementById('filter-chips');
+  container.innerHTML = '';
+
+  // "All" chip
+  const allChip = document.createElement('button');
+  allChip.className = 'filter-chip all-chip' + (filterSourceId==='all' ? '' : ' inactive');
+  allChip.innerHTML = '🔵 All Sources';
+  allChip.onclick = () => setSourceFilter('all');
+  container.appendChild(allChip);
+
+  // One chip per source
+  sources.forEach(src => {
+    const isActive = filterSourceId === src.id;
+    const chip = document.createElement('button');
+    chip.className = 'filter-chip src-chip' + (isActive ? ' active' : '');
+    chip.style.background = isActive ? src.color.bg + '33' : '';
+    chip.style.border = isActive ? `1.5px solid ${src.color.bg}` : '1.5px solid transparent';
+    chip.style.color = isActive ? '#fff' : '';
+    chip.innerHTML = `${src.icon} ${src.name}`;
+    chip.onclick = () => setSourceFilter(src.id);
+    container.appendChild(chip);
+  });
+}
+
+function renderHistory() {
+  renderFilterChips();
+  populateYearOptions();
+  populateDayOptions();
+  renderTagFilterRow();
+  const list = document.getElementById('tx-list');
+  const empty = document.getElementById('tx-empty');
+  Array.from(list.children).forEach(c => { if(c!==empty) c.remove(); });
+
+  // Apply filters
+  let filtered = transactions;
+  if (filterSourceId !== 'all') filtered = filtered.filter(t => t.sourceId === filterSourceId);
+  if (filterType !== 'all')     filtered = filtered.filter(t => t.type === filterType);
+  if (filterYear)               filtered = filtered.filter(t => new Date(t.date).getFullYear() === parseInt(filterYear));
+  if (filterMonth !== '')       filtered = filtered.filter(t => new Date(t.date).getMonth() === parseInt(filterMonth));
+  if (filterDay)                filtered = filtered.filter(t => new Date(t.date).getDate() === parseInt(filterDay));
+  if (filterTag !== 'all')      filtered = filtered.filter(t => (t.tags||[]).includes(filterTag));
+
+  // Apply sort
+  filtered = applySort(filtered);
+
+  const sym = currSymbol();
+  const depTotal = filtered.filter(t=>t.type==='deposit').reduce((a,t)=>a+t.amount,0);
+  const sptTotal = filtered.filter(t=>t.type==='spend').reduce((a,t)=>a+t.amount,0);
+  document.getElementById('filter-count').textContent = `${filtered.length} transaction${filtered.length!==1?'s':''}`;
+  if (filterType==='all') {
+    document.getElementById('filter-total').textContent = filtered.length ? `+${sym}${fmt(depTotal)}  -${sym}${fmt(sptTotal)}` : '';
+  } else if (filterType==='deposit') {
+    document.getElementById('filter-total').textContent = filtered.length ? `+${sym}${fmt(depTotal)}` : '';
+  } else {
+    document.getElementById('filter-total').textContent = filtered.length ? `-${sym}${fmt(sptTotal)}` : '';
+  }
+
+  if (!filtered.length) { empty.style.display='block'; return; }
+  empty.style.display='none';
+
+  filtered.forEach(tx => {
+    const d = new Date(tx.date);
+    const dateStr = d.toLocaleDateString('en-BD',{day:'numeric',month:'short',year:'numeric'});
+    const src = sources.find(s=>s.id===tx.sourceId);
+    const borderColor = src ? src.color.bg+'55' : (tx.type==='deposit' ? 'rgba(85,239,196,0.3)' : 'rgba(255,107,107,0.3)');
+
+    // Wrapper
+    const wrapper = document.createElement('div');
+    wrapper.className = 'tx-wrapper';
+
+    // Red bg (revealed on swipe)
+    wrapper.innerHTML = `<div class="tx-delete-bg"><p>Delete</p><span>🗑</span></div>`;
+
+    // Card
+    const div = document.createElement('div');
+    div.className='tx-card';
+    div.style.borderLeft = `3px solid ${borderColor}`;
+    div.innerHTML=`
+      <div class="tx-icon ${tx.type==='deposit'?'dep':'spt'}">${tx.sourceIcon}</div>
+      <div class="tx-info" style="min-width:0;">
+        <h4>${tx.sourceName}</h4>
+        <p>${tx.note || (tx.type==='deposit'?'Deposit':'Expense')} · ${dateStr}</p>
+        ${(tx.tags&&tx.tags.length) ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;">${(tx.tags).map(tid=>{const tg=getTag(tid);return tg?`<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:12px;background:${tg.color}22;color:${tg.color};border:1px solid ${tg.color}44;">${tg.emoji} ${tg.name}</span>`:''}).join('')}</div>` : ''}
+      </div>
+      <span class="tx-amount ${tx.type==='deposit'?'dep':'spt'}">${tx.type==='deposit'?'+':'-'}${currSymbol()}${fmt(tx.amount)}</span>
+      <div style="display:flex;flex-direction:column;gap:5px;margin-left:6px;flex-shrink:0;">
+        <button class="tx-edit-btn" style="background:rgba(124,110,250,0.15);border:none;border-radius:10px;padding:6px 8px;cursor:pointer;font-size:15px;-webkit-tap-highlight-color:transparent;">✏️</button>
+        <button class="tx-del-btn" data-txid="${tx.id}" style="background:rgba(255,107,107,0.13);border:none;border-radius:10px;padding:6px 8px;cursor:pointer;font-size:15px;-webkit-tap-highlight-color:transparent;">🗑</button>
+      </div>
+    `;
+    div.querySelector('.tx-edit-btn').addEventListener('click', () => {
+      showEditSheet(tx);
+    });
+    // attach delete handler safely
+    div.querySelector('.tx-del-btn').addEventListener('click', () => {
+      showDeleteConfirm(tx);
+    });
+
+    // Swipe logic
+    let startX = 0, currentX = 0, swiping = false;
+    const THRESHOLD = 80;
+
+    div.addEventListener('touchstart', e => {
+      startX = e.touches[0].clientX;
+      swiping = true;
+      div.classList.add('swiping');
+    }, {passive:true});
+
+    div.addEventListener('touchmove', e => {
+      if (!swiping) return;
+      currentX = e.touches[0].clientX - startX;
+      if (currentX < 0) {
+        div.style.transform = `translateX(${Math.max(currentX, -120)}px)`;
+      }
+    }, {passive:true});
+
+    div.addEventListener('touchend', () => {
+      swiping = false;
+      div.classList.remove('swiping');
+      if (currentX < -THRESHOLD) {
+        // Confirm delete
+        div.style.transform = 'translateX(-90px)';
+        showDeleteConfirm(tx);
+      } else {
+        div.style.transform = 'translateX(0)';
+      }
+      currentX = 0;
+    });
+
+    // Also long-press or tap delete button fallback
+    div.addEventListener('click', e => {
+      // only if already swiped open
+    });
+
+    wrapper.appendChild(div);
+    list.appendChild(wrapper);
+  });
+}
+
+// ─── Delete Transaction ───────────────────────────────────
+function showDeleteConfirm(tx) {
+  // Remove any existing confirm sheet
+  const existing = document.getElementById('del-confirm-sheet');
+  if (existing) existing.remove();
+
+  const sheet = document.createElement('div');
+  sheet.className = 'del-confirm';
+  sheet.id = 'del-confirm-sheet';
+
+  const amtColor = tx.type==='deposit' ? 'var(--green)' : 'var(--red)';
+  const amtSign  = tx.type==='deposit' ? '+' : '-';
+  const d = new Date(tx.date);
+  const dateStr = d.toLocaleDateString('en-BD',{day:'numeric',month:'short',year:'numeric'});
+
+  sheet.innerHTML = `
+    <div class="del-confirm-box">
+      <div class="handle"></div>
+      <h3>🗑 Delete Transaction?</h3>
+      <p>This will permanently remove the entry and reverse its effect on the source balance.</p>
+      <div class="del-tx-preview">
+        <span class="di">${tx.sourceIcon}</span>
+        <div>
+          <h4>${tx.sourceName}</h4>
+          <p>${tx.note || (tx.type==='deposit'?'Deposit':'Expense')} · ${dateStr}</p>
+        </div>
+        <span class="da" style="color:${amtColor};">${amtSign}৳${fmt(tx.amount)}</span>
+      </div>
+      <div class="btn-row">
+        <button class="btn-cancel" id="del-cancel-btn">Keep It</button>
+        <button class="btn-primary red" id="del-confirm-btn">Yes, Delete</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(sheet);
+
+  document.getElementById('del-cancel-btn').onclick = () => {
+    sheet.remove();
+  };
+  document.getElementById('del-confirm-btn').onclick = () => {
+    deleteTransaction(tx.id);
+    sheet.remove();
+  };
+  sheet.addEventListener('click', e => {
+    if (e.target === sheet) {
+      sheet.remove();
+    }
+  });
+}
+
+function deleteTransaction(txId) {
+  const tx = transactions.find(t => t.id === txId);
+  if (!tx) return;
+  // Reverse the effect on source
+  sources = sources.map(s => {
+    if (s.id !== tx.sourceId) return s;
+    if (tx.type === 'deposit') return {...s, totalDeposited: Math.max(0, s.totalDeposited - tx.amount)};
+    if (tx.type === 'spend')   return {...s, totalSpent: Math.max(0, s.totalSpent - tx.amount)};
+    return s;
+  });
+  transactions = transactions.filter(t => t.id !== txId);
+  save();
+  renderAll();
+  renderHistory();
+  showToast('Transaction deleted.', 'warn');
+}
+
+// ─── Edit Transaction ─────────────────────────────────────
+function showEditSheet(tx) {
+  const existing = document.getElementById('edit-sheet-el');
+  if (existing) existing.remove();
+
+  const amtColor = tx.type==='deposit' ? 'var(--green)' : 'var(--red)';
+  const typeLabel = tx.type==='deposit' ? '💵 Deposit' : '💸 Expense';
+
+  const sheet = document.createElement('div');
+  sheet.className = 'edit-sheet';
+  sheet.id = 'edit-sheet-el';
+  sheet.innerHTML = `
+    <div class="edit-sheet-box">
+      <div class="handle"></div>
+      <h3>✏️ Edit Transaction</h3>
+      <div style="display:flex;align-items:center;gap:10px;background:var(--card2);border-radius:14px;padding:10px 14px;margin-bottom:16px;">
+        <span style="font-size:22px;">${tx.sourceIcon}</span>
+        <div>
+          <p style="color:var(--text);font-weight:600;font-size:14px;">${tx.sourceName}</p>
+          <p style="color:var(--muted);font-size:12px;">${typeLabel}</p>
+        </div>
+        <span style="margin-left:auto;font-family:'Space Mono',monospace;font-size:13px;color:${amtColor};">${tx.type==='deposit'?'+':'-'}৳${fmt(tx.amount)}</span>
+      </div>
+      <label>Amount (${activeCurrency==='USD'?'$':'৳'})</label>
+      <input class="big" id="edit-amount" type="number" inputmode="decimal" value="${tx.amount}" />
+      <label>Description / Note</label>
+      <input id="edit-note" type="text" placeholder="Add a note..." value="${tx.note || ''}" />
+      <label style="display:flex;align-items:center;justify-content:space-between;">Tags <span id="edit-tag-count" style="color:var(--dim);font-size:11px;">(optional)</span></label>
+      <div class="tag-grid" id="edit-tag-grid"></div>
+      <div class="btn-row">
+        <button class="btn-cancel" id="edit-cancel-btn">Cancel</button>
+        <button class="btn-primary purple" id="edit-save-btn">Save Changes</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(sheet);
+
+  // Render tag grid for edit
+  let editTags = [...(tx.tags||[])];
+  function refreshEditTags() {
+    renderTagGrid('edit-tag-grid', editTags, (id) => {
+      editTags = editTags.includes(id) ? editTags.filter(t=>t!==id) : [...editTags, id];
+      refreshEditTags();
+    });
+    updateTagCount('edit-tag-count', editTags.length);
+  }
+  refreshEditTags();
+
+  document.getElementById('edit-cancel-btn').onclick = () => sheet.remove();
+  sheet.addEventListener('click', e => { if (e.target === sheet) sheet.remove(); });
+
+  document.getElementById('edit-save-btn').onclick = () => {
+    const newAmt = parseFloat(document.getElementById('edit-amount').value);
+    const newNote = document.getElementById('edit-note').value.trim();
+    if (isNaN(newAmt) || newAmt <= 0) { showToast('Enter a valid amount!', 'warn'); return; }
+    saveEditTransaction(tx, newAmt, newNote, editTags);
+    sheet.remove();
+  };
+}
+
+function saveEditTransaction(oldTx, newAmt, newNote, newTags) {
+  const diff = newAmt - oldTx.amount;
+  sources = sources.map(s => {
+    if (s.id !== oldTx.sourceId) return s;
+    if (oldTx.type === 'deposit') return {...s, totalDeposited: Math.max(0, s.totalDeposited + diff)};
+    if (oldTx.type === 'spend')   return {...s, totalSpent: Math.max(0, s.totalSpent + diff)};
+    return s;
+  });
+  transactions = transactions.map(t =>
+    t.id === oldTx.id ? {...t, amount: newAmt, note: newNote, tags: newTags || t.tags || []} : t
+  );
+  save();
+  renderAll();
+  renderHistory();
+  showToast('Transaction updated!');
+}
+
+// ─── Backup & Restore ─────────────────────────────────────
+function getBackupJSON() {
+  const bdtSources = JSON.parse(localStorage.getItem('mm_sources_BDT') || '[]');
+  const bdtTx      = JSON.parse(localStorage.getItem('mm_transactions_BDT') || '[]');
+  const usdSources = JSON.parse(localStorage.getItem('mm_sources_USD') || '[]');
+  const usdTx      = JSON.parse(localStorage.getItem('mm_transactions_USD') || '[]');
+  const folders    = JSON.parse(localStorage.getItem('mm_folders') || '[]');
+  return JSON.stringify({
+    bdtWallet: { sources: bdtSources, transactions: bdtTx },
+    usdWallet: { sources: usdSources, transactions: usdTx },
+    folders,
+    exportedAt: new Date().toISOString(),
+    version: 2
+  }, null, 2);
+}
+
+function sendBackupEmail() {
+  const email = (document.getElementById('ps-email').value || '').trim();
+  if (!email || !email.includes('@')) { showToast('Enter a valid Gmail address!', 'warn'); return; }
+  localStorage.setItem('mm_backup_email', email);
+
+  const json = getBackupJSON();
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-BD',{day:'numeric',month:'short',year:'numeric'});
+
+  // Build email text to copy
+  const emailText =
+`Money Manager Backup
+====================
+Date: ${now.toLocaleString()}
+Sources: ${sources.length}
+Transactions: ${transactions.length}
+Total Deposited: ৳${fmt(sources.reduce((a,s)=>a+s.totalDeposited,0))}
+Total Spent: ৳${fmt(sources.reduce((a,s)=>a+s.totalSpent,0))}
+
+---- BACKUP DATA (copy everything below to restore) ----
+
+${json}
+
+---- END BACKUP DATA ----
+
+To restore: Open Money Manager → tap 👤 → paste the JSON into Restore box.`;
+
+  // Copy to clipboard first, then open Gmail
+  const doGmail = () => {
+    const subject = encodeURIComponent(`Money Manager Backup — ${dateStr}`);
+    const gmailURL = `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(email)}&su=${subject}`;
+    window.open(gmailURL, '_blank');
+    localStorage.setItem('mm_last_backup', new Date().toISOString());
+    document.getElementById('ps-last').textContent =
+      new Date().toLocaleDateString('en-BD',{day:'numeric',month:'short',year:'numeric'});
+  };
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(emailText).then(() => {
+      doGmail();
+      showBackupInstructions(email);
+    }).catch(() => {
+      // Fallback: show text in a copyable box
+      showBackupTextBox(emailText, email);
+    });
+  } else {
+    showBackupTextBox(emailText, email);
+  }
+}
+
+function showBackupInstructions(email) {
+  const existing = document.getElementById('backup-instructions');
+  if (existing) existing.remove();
+  const sheet = document.createElement('div');
+  sheet.id = 'backup-instructions';
+  sheet.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);display:flex;align-items:flex-end;justify-content:center;z-index:400;animation:fadeIn 0.2s ease;';
+  sheet.innerHTML = `
+    <div style="width:100%;max-width:500px;background:#1A1A24;border-radius:28px 28px 0 0;padding:24px 22px calc(32px + env(safe-area-inset-bottom,0px));border:1px solid #2A2A38;border-bottom:none;animation:slideUp 0.25s ease;">
+      <div style="width:40px;height:4px;background:#333;border-radius:2px;margin:0 auto 18px;"></div>
+      <h3 style="font-size:17px;font-weight:700;color:#55EFC4;margin-bottom:14px;">✅ Backup Copied!</h3>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
+        <div style="display:flex;gap:12px;align-items:flex-start;background:#252530;border-radius:12px;padding:12px;">
+          <span style="font-size:20px;flex-shrink:0;">1️⃣</span>
+          <p style="color:#ccc;font-size:13px;line-height:1.6;">Gmail has opened with <strong style="color:#fff;">${email}</strong> as recipient and subject pre-filled.</p>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;background:#252530;border-radius:12px;padding:12px;">
+          <span style="font-size:20px;flex-shrink:0;">2️⃣</span>
+          <p style="color:#ccc;font-size:13px;line-height:1.6;">Tap the email body area and <strong style="color:#fff;">long-press → Paste</strong> to paste your backup data.</p>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;background:#252530;border-radius:12px;padding:12px;">
+          <span style="font-size:20px;flex-shrink:0;">3️⃣</span>
+          <p style="color:#ccc;font-size:13px;line-height:1.6;">Hit <strong style="color:#fff;">Send</strong> — your backup is saved in Gmail forever!</p>
+        </div>
+      </div>
+      <button onclick="document.getElementById('backup-instructions').remove()" style="width:100%;background:linear-gradient(135deg,#7C6EFA,#A855F7);border:none;border-radius:16px;padding:15px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">Got it!</button>
+    </div>
+  `;
+  document.body.appendChild(sheet);
+  sheet.addEventListener('click', e => { if(e.target===sheet) sheet.remove(); });
+}
+
+function showBackupTextBox(text, email) {
+  const existing = document.getElementById('backup-textbox');
+  if (existing) existing.remove();
+  const sheet = document.createElement('div');
+  sheet.id = 'backup-textbox';
+  sheet.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);display:flex;align-items:flex-end;justify-content:center;z-index:400;animation:fadeIn 0.2s ease;';
+  sheet.innerHTML = `
+    <div style="width:100%;max-width:500px;background:#1A1A24;border-radius:28px 28px 0 0;padding:22px 20px calc(30px + env(safe-area-inset-bottom,0px));border:1px solid #2A2A38;border-bottom:none;animation:slideUp 0.25s ease;max-height:80vh;overflow-y:auto;">
+      <div style="width:40px;height:4px;background:#333;border-radius:2px;margin:0 auto 16px;"></div>
+      <h3 style="font-size:16px;font-weight:700;color:#7C6EFA;margin-bottom:6px;">📋 Copy & Send Manually</h3>
+      <p style="color:#888;font-size:12px;line-height:1.6;margin-bottom:12px;">Select all the text below, copy it, then paste into a Gmail email to <strong style="color:#fff;">${email}</strong>.</p>
+      <textarea id="backup-copybox" readonly style="width:100%;background:#0F0F14;border:1px solid #333;border-radius:12px;padding:12px;color:#aaa;font-size:11px;font-family:'Space Mono',monospace;outline:none;resize:none;height:130px;line-height:1.5;margin-bottom:12px;">${text}</textarea>
+      <div style="display:flex;gap:10px;">
+        <button onclick="
+          const ta=document.getElementById('backup-copybox');
+          ta.select();ta.setSelectionRange(0,99999);
+          document.execCommand('copy');
+          this.textContent='✅ Copied!';
+          this.style.background='rgba(85,239,196,0.2)';
+          this.style.color='#55EFC4';
+          this.style.border='1px solid rgba(85,239,196,0.4)';
+        " style="flex:1;background:#252530;border:1px solid #333;border-radius:14px;padding:13px;color:#ccc;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">📋 Select & Copy</button>
+        <button onclick="document.getElementById('backup-textbox').remove()" style="flex:1;background:linear-gradient(135deg,#7C6EFA,#A855F7);border:none;border-radius:14px;padding:13px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">Done</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(sheet);
+  sheet.addEventListener('click', e => { if(e.target===sheet) sheet.remove(); });
+  // Try to open Gmail without body
+  const now = new Date();
+  const subject = encodeURIComponent(`Money Manager Backup — ${now.toLocaleDateString('en-BD',{day:'numeric',month:'short',year:'numeric'})}`);
+  window.open(`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(email)}&su=${subject}`, '_blank');
+  localStorage.setItem('mm_last_backup', new Date().toISOString());
+  if (document.getElementById('ps-last')) {
+    document.getElementById('ps-last').textContent = now.toLocaleDateString('en-BD',{day:'numeric',month:'short',year:'numeric'});
+  }
+}
+
+function downloadBackup() {
+  const json = getBackupJSON();
+  const data = JSON.parse(json);
+  const totalSrc = data.bdtWallet.sources.length + data.usdWallet.sources.length;
+  if (totalSrc === 0) { showToast('Nothing to backup yet!', 'warn'); return; }
+  const blob = new Blob([json], {type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const now  = new Date();
+  a.href = url;
+  a.download = `money-manager-backup-${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  localStorage.setItem('mm_last_backup', new Date().toISOString());
+  const el = document.getElementById('ps-last');
+  if (el) el.textContent = now.toLocaleDateString('en-BD',{day:'numeric',month:'short',year:'numeric'});
+  showToast('Backup file downloaded!');
+}
+
+function restoreFromJSONProfile() {
+  let raw = (document.getElementById('ps-restore-input').value || '').trim();
+  if (!raw) { showToast('Paste your backup JSON first!', 'warn'); return; }
+
+  // ── Extract JSON from email body if user pasted the whole email ──
+  // Look for content between the backup data markers
+  const markerStart = raw.indexOf('---- BACKUP DATA');
+  const markerEnd   = raw.indexOf('---- END BACKUP DATA');
+  if (markerStart !== -1 && markerEnd !== -1) {
+    // Extract lines between markers
+    raw = raw.substring(raw.indexOf('\n', markerStart) + 1, markerEnd).trim();
+  }
+
+  // Also strip any markdown code fences (```json ... ```)
+  raw = raw.replace(/^```[a-z]*\n?/i,'').replace(/\n?```$/,'').trim();
+
+  // Try to find the first { and last } to extract just the JSON object
+  const firstBrace = raw.indexOf('{');
+  const lastBrace  = raw.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    raw = raw.substring(firstBrace, lastBrace + 1);
+  }
+
+  try {
+    const data = JSON.parse(raw);
+
+    // v2 format — dual wallet
+    if (data.bdtWallet || data.usdWallet) {
+      const bdt = data.bdtWallet || { sources: [], transactions: [] };
+      const usd = data.usdWallet || { sources: [], transactions: [] };
+      const totalSrc = (bdt.sources||[]).length + (usd.sources||[]).length;
+      const totalTx  = (bdt.transactions||[]).length + (usd.transactions||[]).length;
+      if (!confirm(`Restore backup from ${data.exportedAt ? new Date(data.exportedAt).toLocaleDateString() : 'file'}?\n\n৳ BDT: ${(bdt.sources||[]).length} sources, ${(bdt.transactions||[]).length} transactions\n$ USD: ${(usd.sources||[]).length} sources, ${(usd.transactions||[]).length} transactions\n\nThis will REPLACE your current data.`)) return;
+      localStorage.setItem('mm_sources_BDT',     JSON.stringify(bdt.sources || []));
+      localStorage.setItem('mm_transactions_BDT',JSON.stringify(bdt.transactions || []));
+      localStorage.setItem('mm_sources_USD',     JSON.stringify(usd.sources || []));
+      localStorage.setItem('mm_transactions_USD',JSON.stringify(usd.transactions || []));
+      if (data.folders) localStorage.setItem('mm_folders', JSON.stringify(data.folders));
+      load(); renderAll();
+      const psrc = document.getElementById('ps-src');
+      const ptx  = document.getElementById('ps-tx');
+      if (psrc) psrc.textContent = sources.length;
+      if (ptx)  ptx.textContent  = transactions.length;
+      document.getElementById('ps-restore-input').value = '';
+      showToast(`✅ Restored! ${totalSrc} sources, ${totalTx} transactions`);
+    }
+    // v1 format — single wallet with sources + transactions at top level
+    else if (Array.isArray(data.sources) && Array.isArray(data.transactions)) {
+      if (!confirm(`Restore ${data.sources.length} sources and ${data.transactions.length} transactions to ${activeCurrency} wallet?\n\nThis will REPLACE your current ${activeCurrency} data.`)) return;
+      localStorage.setItem(`mm_sources_${activeCurrency}`,     JSON.stringify(data.sources));
+      localStorage.setItem(`mm_transactions_${activeCurrency}`,JSON.stringify(data.transactions));
+      load(); renderAll();
+      document.getElementById('ps-restore-input').value = '';
+      showToast(`✅ Restored ${data.sources.length} sources!`);
+    }
+    else {
+      showToast('⚠️ Could not find valid backup data in the JSON.', 'warn');
+    }
+  } catch(e) {
+    console.error('Restore parse error:', e, '\nRaw (first 200):', raw.substring(0,200));
+    showToast('⚠️ Could not read the JSON. Make sure you copied only the backup data section.', 'warn');
+  }
+}
+
+// ─── Google Drive Backup ──────────────────────────────────
+const GDRIVE_CLIENT_ID = ''; // ← User must fill this in
+const GDRIVE_SCOPES    = 'https://www.googleapis.com/auth/drive.appdata';
+const BACKUP_FILENAME  = 'money-manager-backup.json';
+
+let gAccessToken = null;
+let gUserProfile = null;
+
+function isGDriveConfigured() {
+  return GDRIVE_CLIENT_ID && GDRIVE_CLIENT_ID.length > 10;
+}
+
+function handleSignInOut() {
+  if (!isGDriveConfigured()) {
+    showGDriveSetupSheet();
+    return;
+  }
+  if (gAccessToken) {
+    // Sign out
+    gAccessToken = null;
+    gUserProfile = null;
+    localStorage.removeItem('mm_g_profile');
+    updateProfileUI();
+    showToast('Signed out.');
+  } else {
+    startGoogleSignIn();
+  }
+}
+
+function startGoogleSignIn() {
+  const clientId = localStorage.getItem('mm_gdrive_client_id') || GDRIVE_CLIENT_ID;
+  if (!clientId) { showGDriveSetupSheet(); return; }
+
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: clientId,
+    scope: GDRIVE_SCOPES + ' https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
+    callback: async (resp) => {
+      if (resp.error) { showToast('Sign in failed: ' + resp.error, 'warn'); return; }
+      gAccessToken = resp.access_token;
+      // Fetch user info
+      try {
+        const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: 'Bearer ' + gAccessToken }
+        });
+        gUserProfile = await r.json();
+        localStorage.setItem('mm_g_profile', JSON.stringify(gUserProfile));
+      } catch(e) {}
+      updateProfileUI();
+      showToast('Signed in! ✅');
+    }
+  });
+  client.requestAccessToken();
+}
+
+function updateProfileUI() {
+  const signedIn = !!gAccessToken;
+  const outUI = document.getElementById('ps-signedout-ui');
+  const inUI  = document.getElementById('ps-signedin-ui');
+  const signBtn = document.getElementById('ps-sign-btn');
+  if (outUI) outUI.style.display = signedIn ? 'none' : 'block';
+  if (inUI)  inUI.style.display  = signedIn ? 'block' : 'none';
+  if (signBtn) {
+    signBtn.textContent = signedIn ? 'Sign Out' : 'Sign In';
+    signBtn.style.background = signedIn ? 'rgba(255,107,107,0.2)' : 'linear-gradient(135deg,#4285F4,#34A853)';
+    signBtn.style.color  = signedIn ? 'var(--red)' : '#fff';
+    signBtn.style.border = signedIn ? '1px solid rgba(255,107,107,0.3)' : 'none';
+  }
+  if (gUserProfile) {
+    const nm = document.getElementById('ps-name');
+    const gm = document.getElementById('ps-gmail');
+    const av = document.getElementById('ps-avatar');
+    if (nm) nm.textContent = gUserProfile.name || 'Google User';
+    if (gm) gm.textContent = gUserProfile.email || '';
+    if (av && gUserProfile.picture) {
+      av.innerHTML = `<img src="${gUserProfile.picture}" style="width:100%;height:100%;object-fit:cover;border-radius:27px;">`;
+    }
+  } else {
+    const nm = document.getElementById('ps-name');
+    const gm = document.getElementById('ps-gmail');
+    const av = document.getElementById('ps-avatar');
+    if (nm) nm.textContent = 'My Profile';
+    if (gm) gm.textContent = 'Not signed in';
+    if (av) { av.innerHTML = '👤'; av.style.background = 'linear-gradient(135deg,#7C6EFA,#A855F7)'; }
+  }
+}
+
+function driveSetStatus(msg, color='var(--muted)') {
+  const el = document.getElementById('ps-drive-status');
+  const txt = document.getElementById('ps-drive-status-text');
+  el.style.display = 'block';
+  txt.style.color = color;
+  txt.textContent = msg;
+}
+
+async function driveBackup() {
+  if (!gAccessToken) { showToast('Sign in first!', 'warn'); return; }
+  const btn = document.getElementById('ps-backup-btn');
+  btn.textContent = '⏳ Saving...'; btn.disabled = true;
+  driveSetStatus('Uploading to Google Drive...', 'var(--muted)');
+
+  try {
+    const json = getBackupJSON();
+    const blob = new Blob([json], {type:'application/json'});
+
+    // Check if file already exists in appDataFolder
+    const listRes = await fetch(
+      `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${BACKUP_FILENAME}'&fields=files(id,name)`,
+      { headers: { Authorization: 'Bearer ' + gAccessToken } }
+    );
+    const listData = await listRes.json();
+    const existingId = listData.files && listData.files.length > 0 ? listData.files[0].id : null;
+
+    let url, method;
+    if (existingId) {
+      url    = `https://www.googleapis.com/upload/drive/v3/files/${existingId}?uploadType=media`;
+      method = 'PATCH';
+    } else {
+      // Create new file in appDataFolder
+      const meta = JSON.stringify({ name: BACKUP_FILENAME, parents: ['appDataFolder'] });
+      const form = new FormData();
+      form.append('metadata', new Blob([meta], {type:'application/json'}));
+      form.append('file', blob);
+      const createRes = await fetch(
+        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
+        { method: 'POST', headers: { Authorization: 'Bearer ' + gAccessToken }, body: form }
+      );
+      const created = await createRes.json();
+      if (!created.id) throw new Error('Create failed');
+      localStorage.setItem('mm_last_backup', new Date().toISOString());
+      document.getElementById('ps-last').textContent =
+        new Date().toLocaleDateString('en-BD',{day:'numeric',month:'short',year:'numeric'});
+      driveSetStatus('✅ Backed up to Google Drive!', 'var(--green)');
+      showToast('Backed up to Drive! ✅');
+      btn.textContent = '☁️ Backup to Google Drive'; btn.disabled = false;
+      return;
+    }
+
+    const updateRes = await fetch(url, {
+      method,
+      headers: { Authorization: 'Bearer ' + gAccessToken, 'Content-Type': 'application/json' },
+      body: json
+    });
+    if (!updateRes.ok) throw new Error('Update failed');
+
+    localStorage.setItem('mm_last_backup', new Date().toISOString());
+    document.getElementById('ps-last').textContent =
+      new Date().toLocaleDateString('en-BD',{day:'numeric',month:'short',year:'numeric'});
+    driveSetStatus('✅ Backed up to Google Drive!', 'var(--green)');
+    showToast('Backed up to Drive! ✅');
+  } catch(e) {
+    driveSetStatus('❌ Backup failed: ' + e.message, 'var(--red)');
+    showToast('Backup failed!', 'warn');
+  }
+  btn.textContent = '☁️ Backup to Google Drive'; btn.disabled = false;
+}
+
+async function driveRestore() {
+  if (!gAccessToken) { showToast('Sign in first!', 'warn'); return; }
+  const btn = document.getElementById('ps-restore-btn');
+  btn.textContent = '⏳ Fetching...'; btn.disabled = true;
+  driveSetStatus('Looking for backup on Drive...', 'var(--muted)');
+
+  try {
+    // Find the backup file
+    const listRes = await fetch(
+      `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${BACKUP_FILENAME}'&fields=files(id,name,modifiedTime)`,
+      { headers: { Authorization: 'Bearer ' + gAccessToken } }
+    );
+    const listData = await listRes.json();
+
+    if (!listData.files || listData.files.length === 0) {
+      driveSetStatus('No backup found on Drive.', 'var(--yellow)');
+      showToast('No backup found on Drive.', 'warn');
+      btn.textContent = '📥 Restore from Google Drive'; btn.disabled = false;
+      return;
+    }
+
+    const fileId  = listData.files[0].id;
+    const modTime = new Date(listData.files[0].modifiedTime)
+      .toLocaleDateString('en-BD', {day:'numeric', month:'short', year:'numeric'});
+
+    // Download file content as text first, then parse
+    const dlRes = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+      { headers: { Authorization: 'Bearer ' + gAccessToken } }
+    );
+    if (!dlRes.ok) throw new Error(`Download failed: ${dlRes.status}`);
+
+    const rawText = await dlRes.text();
+    let data;
+    try {
+      data = JSON.parse(rawText);
+    } catch(pe) {
+      throw new Error('Backup file is not valid JSON');
+    }
+
+    // Detect v2 (dual wallet) vs v1 (single wallet)
+    const isV2 = !!(data.bdtWallet || data.usdWallet);
+    const isV1 = !isV2 && Array.isArray(data.sources) && Array.isArray(data.transactions);
+
+    if (!isV2 && !isV1) throw new Error('Unrecognised backup format');
+
+    if (isV2) {
+      const bdt = data.bdtWallet || { sources: [], transactions: [] };
+      const usd = data.usdWallet || { sources: [], transactions: [] };
+      const totalSrc = (bdt.sources||[]).length + (usd.sources||[]).length;
+      const totalTx  = (bdt.transactions||[]).length + (usd.transactions||[]).length;
+
+      if (!confirm(`Restore Drive backup from ${modTime}?\n\n৳ BDT: ${(bdt.sources||[]).length} sources, ${(bdt.transactions||[]).length} transactions\n$ USD: ${(usd.sources||[]).length} sources, ${(usd.transactions||[]).length} transactions\n\nThis will REPLACE your current data.`)) {
+        btn.textContent = '📥 Restore from Google Drive'; btn.disabled = false;
+        document.getElementById('ps-drive-status').style.display = 'none';
+        return;
+      }
+
+      localStorage.setItem('mm_sources_BDT',     JSON.stringify(bdt.sources || []));
+      localStorage.setItem('mm_transactions_BDT', JSON.stringify(bdt.transactions || []));
+      localStorage.setItem('mm_sources_USD',      JSON.stringify(usd.sources || []));
+      localStorage.setItem('mm_transactions_USD', JSON.stringify(usd.transactions || []));
+      if (data.folders) localStorage.setItem('mm_folders', JSON.stringify(data.folders));
+
+      load(); renderAll();
+      const psrc = document.getElementById('ps-src');
+      const ptx  = document.getElementById('ps-tx');
+      if (psrc) psrc.textContent = sources.length;
+      if (ptx)  ptx.textContent  = transactions.length;
+      driveSetStatus(`✅ Restored from ${modTime} — ${totalSrc} sources, ${totalTx} transactions`, 'var(--green)');
+      showToast(`✅ Restored ${totalSrc} sources!`);
+
+    } else {
+      // v1 — restore into active currency wallet
+      if (!confirm(`Restore Drive backup from ${modTime}?\n\n${data.sources.length} sources, ${data.transactions.length} transactions → ${activeCurrency} wallet\n\nThis will REPLACE your current ${activeCurrency} data.`)) {
+        btn.textContent = '📥 Restore from Google Drive'; btn.disabled = false;
+        document.getElementById('ps-drive-status').style.display = 'none';
+        return;
+      }
+      localStorage.setItem(`mm_sources_${activeCurrency}`,     JSON.stringify(data.sources));
+      localStorage.setItem(`mm_transactions_${activeCurrency}`, JSON.stringify(data.transactions));
+      load(); renderAll();
+      driveSetStatus(`✅ Restored from ${modTime}`, 'var(--green)');
+      showToast(`✅ Restored ${data.sources.length} sources!`);
+    }
+
+  } catch(e) {
+    console.error('Drive restore error:', e);
+    driveSetStatus('❌ ' + e.message, 'var(--red)');
+    showToast('Restore failed: ' + e.message, 'warn');
+  }
+  btn.textContent = '📥 Restore from Google Drive'; btn.disabled = false;
+}
+
+function showGDriveSetupSheet() {
+  const existing = document.getElementById('gdrive-setup-sheet');
+  if (existing) existing.remove();
+  const savedId = localStorage.getItem('mm_gdrive_client_id') || '';
+  const sheet = document.createElement('div');
+  sheet.id = 'gdrive-setup-sheet';
+  sheet.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:flex-end;justify-content:center;z-index:500;animation:fadeIn 0.2s ease;';
+  sheet.innerHTML = `
+    <div style="width:100%;max-width:500px;background:#1A1A24;border-radius:28px 28px 0 0;padding:22px 20px calc(32px + env(safe-area-inset-bottom,0px));border:1px solid #2A2A38;border-bottom:none;animation:slideUp 0.25s ease;max-height:85vh;overflow-y:auto;">
+      <div style="width:40px;height:4px;background:#333;border-radius:2px;margin:0 auto 18px;"></div>
+      <h3 style="font-size:16px;font-weight:700;color:#4285F4;margin-bottom:6px;">🔵 Google Drive Setup</h3>
+      <p style="color:#888;font-size:12px;line-height:1.7;margin-bottom:14px;">To enable Drive backup, you need a free Google OAuth Client ID. Follow these steps:</p>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+        <div style="background:#252530;border-radius:12px;padding:12px;">
+          <p style="color:#fff;font-size:12px;font-weight:700;margin-bottom:4px;">Step 1</p>
+          <p style="color:#aaa;font-size:12px;line-height:1.6;">Go to <strong style="color:#4285F4;">console.cloud.google.com</strong> → Create a new project</p>
+        </div>
+        <div style="background:#252530;border-radius:12px;padding:12px;">
+          <p style="color:#fff;font-size:12px;font-weight:700;margin-bottom:4px;">Step 2</p>
+          <p style="color:#aaa;font-size:12px;line-height:1.6;">Go to <strong style="color:#fff;">APIs & Services → Credentials</strong> → Create OAuth 2.0 Client ID → Web Application</p>
+        </div>
+        <div style="background:#252530;border-radius:12px;padding:12px;">
+          <p style="color:#fff;font-size:12px;font-weight:700;margin-bottom:4px;">Step 3</p>
+          <p style="color:#aaa;font-size:12px;line-height:1.6;">Enable <strong style="color:#fff;">Google Drive API</strong> from APIs Library</p>
+        </div>
+        <div style="background:#252530;border-radius:12px;padding:12px;">
+          <p style="color:#fff;font-size:12px;font-weight:700;margin-bottom:4px;">Step 4</p>
+          <p style="color:#aaa;font-size:12px;line-height:1.6;">Copy your <strong style="color:#fff;">Client ID</strong> and paste below</p>
+        </div>
+      </div>
+      <label style="color:#888;font-size:13px;display:block;margin-bottom:7px;">Your Google Client ID</label>
+      <input id="gdrive-client-input" type="text" placeholder="xxxxxxxxxxxx.apps.googleusercontent.com" value="${savedId}"
+        style="width:100%;background:#252530;border:1px solid #333;border-radius:12px;padding:12px 14px;color:#fff;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;margin-bottom:14px;">
+      <div style="display:flex;gap:10px;">
+        <button onclick="document.getElementById('gdrive-setup-sheet').remove()" style="flex:1;background:#252530;border:none;border-radius:14px;padding:13px;color:#888;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancel</button>
+        <button onclick="saveGDriveClientId()" style="flex:2;background:linear-gradient(135deg,#4285F4,#34A853);border:none;border-radius:14px;padding:13px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">Save & Sign In</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(sheet);
+  sheet.addEventListener('click', e => { if(e.target===sheet) sheet.remove(); });
+}
+
+function saveGDriveClientId() {
+  const id = (document.getElementById('gdrive-client-input').value || '').trim();
+  if (!id || !id.includes('.apps.googleusercontent.com')) {
+    showToast('Enter a valid Client ID!', 'warn'); return;
+  }
+  localStorage.setItem('mm_gdrive_client_id', id);
+  document.getElementById('gdrive-setup-sheet').remove();
+  startGoogleSignIn();
+}
+
+// ─── Summary & Debt ───────────────────────────────────────
+let summaryPeriod = 'all';
+let debtTab = 'tx';
+let selectedDebtTxId = null;
+let selectedDebtSrcId = null;
+
+function loadDebts() {
+  try { return JSON.parse(localStorage.getItem('mm_debts_'+activeCurrency) || '[]'); } catch(e) { return []; }
+}
+function saveDebts(d) {
+  localStorage.setItem('mm_debts_'+activeCurrency, JSON.stringify(d));
+}
+function loadDebtSources() {
+  try { return JSON.parse(localStorage.getItem('mm_debt_sources_'+activeCurrency) || '[]'); } catch(e) { return []; }
+}
+function saveDebtSources(d) {
+  localStorage.setItem('mm_debt_sources_'+activeCurrency, JSON.stringify(d));
+}
+
+function setSummaryPeriod(p) {
+  summaryPeriod = p;
+  ['all','month','week','year'].forEach(k => {
+    const el = document.getElementById('period-'+k);
+    if (el) el.className = 'sort-chip' + (k===p ? ' active-sort' : '');
+  });
+  renderSummary();
+}
+
+function getFilteredTxForSummary() {
+  const now = new Date();
+  return transactions.filter(tx => {
+    const d = new Date(tx.date);
+    if (summaryPeriod==='month') return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear();
+    if (summaryPeriod==='week') {
+      const weekAgo = new Date(now); weekAgo.setDate(now.getDate()-7);
+      return d >= weekAgo;
+    }
+    if (summaryPeriod==='year') return d.getFullYear()===now.getFullYear();
+    return true;
+  });
+}
+
+function renderSummary() {
+  const sym = currSymbol();
+  const txs  = getFilteredTxForSummary();
+  const deps = txs.filter(t=>t.type==='deposit');
+  const spts = txs.filter(t=>t.type==='spend');
+
+  const totalIncome   = deps.reduce((a,t)=>a+t.amount,0);
+  const totalSpending = spts.reduce((a,t)=>a+t.amount,0);
+  const netBal = totalIncome - totalSpending;
+
+  // Debt from transactions
+  const debtTxIds = new Set(loadDebts().map(d=>d.txId));
+  const debtTxs   = txs.filter(t => t.isDebt || debtTxIds.has(t.id));
+  const debtTxAmt = debtTxs.reduce((a,t)=>a+t.amount,0);
+
+  // Debt from sources
+  const debtSrcIds = new Set(loadDebtSources().map(d=>d.srcId));
+  const debtSrcs   = sources.filter(s => s.isDebt || debtSrcIds.has(s.id));
+  const debtSrcAmt = debtSrcs.reduce((a,s)=>a+(s.totalDeposited-s.totalSpent),0);
+
+  const totalDebt   = debtTxAmt + Math.abs(debtSrcAmt);
+  const afterDebt   = netBal - totalDebt;
+
+  // Update UI
+  document.getElementById('sum-income').textContent        = sym+fmt(totalIncome);
+  document.getElementById('sum-income-count').textContent  = `${deps.length} deposit${deps.length!==1?'s':''}`;
+  document.getElementById('sum-spending').textContent      = sym+fmt(totalSpending);
+  document.getElementById('sum-spending-count').textContent= `${spts.length} expense${spts.length!==1?'s':''}`;
+
+  const netEl = document.getElementById('sum-net');
+  netEl.textContent  = sym+fmt(netBal);
+  netEl.style.color  = netBal>=0 ? 'var(--green)' : 'var(--red)';
+
+  const adEl = document.getElementById('sum-after-debt');
+  adEl.textContent = sym+fmt(afterDebt);
+  adEl.style.color = afterDebt>=0 ? 'var(--green)' : 'var(--red)';
+
+  document.getElementById('sum-total-debt').textContent    = sym+fmt(totalDebt);
+  document.getElementById('sum-debt-tx-amt').textContent   = sym+fmt(debtTxAmt);
+  document.getElementById('sum-debt-tx-count').textContent = `${debtTxs.length} transaction${debtTxs.length!==1?'s':''}`;
+  document.getElementById('sum-debt-src-amt').textContent  = sym+fmt(Math.abs(debtSrcAmt));
+  document.getElementById('sum-debt-src-count').textContent= `${debtSrcs.length} source${debtSrcs.length!==1?'s':''}`;
+
+  // Savings rate
+  const savingsRate = totalIncome > 0 ? Math.max(0, Math.min(100, ((totalIncome-totalSpending)/totalIncome)*100)) : 0;
+  document.getElementById('sum-savings-rate').textContent = savingsRate.toFixed(1)+'%';
+  document.getElementById('sum-savings-rate').style.color = savingsRate>=50?'var(--green)':savingsRate>=20?'var(--yellow)':'var(--red)';
+  document.getElementById('sum-savings-bar').style.width  = savingsRate+'%';
+  document.getElementById('sum-savings-bar').style.background = savingsRate>=50?'linear-gradient(90deg,var(--green),#00B894)':savingsRate>=20?'linear-gradient(90deg,var(--yellow),#FDCB6E)':'linear-gradient(90deg,var(--red),#E17055)';
+
+  // Tag breakdown
+  renderTagBreakdown(spts, sym);
+
+  // Source breakdown
+  renderSourceBreakdown(spts, sym);
+
+  // Debt transaction list
+  renderDebtList(debtTxs, sym);
+
+  // Debt source list
+  renderDebtSourceList(debtSrcs, sym);
+}
+
+function renderTagBreakdown(spts, sym) {
+  const c = document.getElementById('sum-tag-breakdown');
+  if (!c) return;
+  const tags = loadTags();
+  const byTag = {};
+  spts.forEach(tx => {
+    (tx.tags||[]).forEach(tid => {
+      byTag[tid] = (byTag[tid]||0) + tx.amount;
+    });
+  });
+  const sorted = Object.entries(byTag).sort((a,b)=>b[1]-a[1]);
+  if (!sorted.length) { c.innerHTML='<p style="color:var(--dim);font-size:12px;">No tagged transactions yet.</p>'; return; }
+  const total = spts.reduce((a,t)=>a+t.amount,0);
+  c.innerHTML = '';
+  sorted.forEach(([tid, amt]) => {
+    const tag = tags.find(t=>t.id===tid);
+    if (!tag) return;
+    const pct = total>0 ? (amt/total*100) : 0;
+    const row = document.createElement('div');
+    row.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <span style="font-size:12px;font-weight:600;color:#fff;">${tag.emoji} ${tag.name}</span>
+        <span style="font-family:'Space Mono',monospace;font-size:12px;color:${tag.color};">${sym}${fmt(amt)} <span style="color:var(--dim);font-size:10px;">${pct.toFixed(0)}%</span></span>
+      </div>
+      <div style="height:5px;background:var(--card2);border-radius:10px;overflow:hidden;margin-bottom:4px;">
+        <div style="height:100%;width:${pct}%;background:${tag.color};border-radius:10px;transition:width 0.4s;"></div>
+      </div>`;
+    c.appendChild(row);
+  });
+}
+
+function renderSourceBreakdown(spts, sym) {
+  const c = document.getElementById('sum-source-breakdown');
+  if (!c) return;
+  const bySrc = {};
+  spts.forEach(tx => { bySrc[tx.sourceId] = (bySrc[tx.sourceId]||0) + tx.amount; });
+  const sorted = Object.entries(bySrc).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  if (!sorted.length) { c.innerHTML='<p style="color:var(--dim);font-size:12px;">No spending data yet.</p>'; return; }
+  const total = spts.reduce((a,t)=>a+t.amount,0);
+  c.innerHTML = '';
+  sorted.forEach(([sid, amt]) => {
+    const src = sources.find(s=>s.id==sid);
+    if (!src) return;
+    const pct = total>0 ? (amt/total*100) : 0;
+    const row = document.createElement('div');
+    row.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <span style="font-size:12px;font-weight:600;color:#fff;">${src.icon} ${src.name}</span>
+        <span style="font-family:'Space Mono',monospace;font-size:12px;color:${src.color.bg};">${sym}${fmt(amt)} <span style="color:var(--dim);font-size:10px;">${pct.toFixed(0)}%</span></span>
+      </div>
+      <div style="height:5px;background:var(--card2);border-radius:10px;overflow:hidden;margin-bottom:4px;">
+        <div style="height:100%;width:${pct}%;background:${src.color.bg};border-radius:10px;transition:width 0.4s;"></div>
+      </div>`;
+    c.appendChild(row);
+  });
+}
+
+function renderDebtList(debtTxs, sym) {
+  const c = document.getElementById('sum-debt-list');
+  if (!c) return;
+  if (!debtTxs.length) { c.innerHTML='<p style="color:var(--dim);font-size:12px;">No debt transactions yet.</p>'; return; }
+  c.innerHTML = '';
+  debtTxs.forEach(tx => {
+    const d = new Date(tx.date).toLocaleDateString('en-BD',{day:'numeric',month:'short'});
+    const debtEntry = loadDebts().find(de=>de.txId===tx.id);
+    const note = debtEntry?.note || tx.note || '';
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;background:rgba(255,107,107,0.08);border-radius:12px;padding:10px 12px;';
+    row.innerHTML = `
+      <span style="font-size:18px;">${tx.sourceIcon}</span>
+      <div style="flex:1;min-width:0;">
+        <p style="color:#fff;font-size:13px;font-weight:600;">${tx.sourceName}</p>
+        <p style="color:var(--dim);font-size:11px;">${note||d} · ${d}</p>
+      </div>
+      <span style="font-family:'Space Mono',monospace;color:var(--red);font-size:13px;font-weight:700;flex-shrink:0;">-${sym}${fmt(tx.amount)}</span>
+      <button onclick="unmarkDebtTx(${tx.id})" style="background:none;border:none;color:var(--dim);font-size:14px;cursor:pointer;padding:2px;-webkit-tap-highlight-color:transparent;" title="Remove debt mark">✕</button>
+    `;
+    c.appendChild(row);
+  });
+}
+
+function renderDebtSourceList(debtSrcs, sym) {
+  const c = document.getElementById('sum-debt-sources');
+  if (!c) return;
+  if (!debtSrcs.length) { c.innerHTML='<p style="color:var(--dim);font-size:12px;">No debt sources yet.</p>'; return; }
+  c.innerHTML = '';
+  debtSrcs.forEach(src => {
+    const bal = src.totalDeposited - src.totalSpent;
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;background:rgba(255,107,107,0.08);border-radius:12px;padding:10px 12px;';
+    row.innerHTML = `
+      <div style="width:36px;height:36px;border-radius:11px;background:${src.color.bg}22;display:flex;align-items:center;justify-content:center;font-size:18px;">${src.icon}</div>
+      <div style="flex:1;min-width:0;">
+        <p style="color:#fff;font-size:13px;font-weight:600;">${src.name}</p>
+        <p style="color:var(--dim);font-size:11px;">Balance: ${sym}${fmt(bal)}</p>
+      </div>
+      <span style="font-family:'Space Mono',monospace;color:var(--red);font-size:13px;font-weight:700;flex-shrink:0;">-${sym}${fmt(Math.abs(bal))}</span>
+      <button onclick="unmarkDebtSrc(${src.id})" style="background:none;border:none;color:var(--dim);font-size:14px;cursor:pointer;padding:2px;-webkit-tap-highlight-color:transparent;" title="Remove debt mark">✕</button>
+    `;
+    c.appendChild(row);
+  });
+}
+
+// ─── Mark / Unmark Debt ───────────────────────────────────
+function openMarkDebt() {
+  debtTab = 'tx';
+  selectedDebtTxId  = null;
+  selectedDebtSrcId = null;
+  setDebtTab('tx');
+  openModal('modal-debt');
+}
+
+function setDebtTab(tab) {
+  debtTab = tab;
+  document.getElementById('debt-panel-tx').style.display  = tab==='tx'  ? 'block' : 'none';
+  document.getElementById('debt-panel-src').style.display = tab==='src' ? 'block' : 'none';
+  document.getElementById('debt-tab-tx').className  = 'type-chip' + (tab==='tx'  ? ' active-spt' : '');
+  document.getElementById('debt-tab-src').className = 'type-chip' + (tab==='src' ? ' active-spt' : '');
+  if (tab==='tx')  renderDebtTxPicker();
+  if (tab==='src') renderDebtSrcPicker();
+}
+
+function renderDebtTxPicker() {
+  const sym = currSymbol();
+  const c = document.getElementById('debt-tx-list');
+  const debtIds = new Set(loadDebts().map(d=>d.txId));
+  const eligible = transactions.filter(t => t.type==='spend' && !t.isDebt && !debtIds.has(t.id));
+  c.innerHTML = '';
+  if (!eligible.length) { c.innerHTML='<p style="color:var(--dim);font-size:12px;">No eligible transactions.</p>'; return; }
+  eligible.forEach(tx => {
+    const d = new Date(tx.date).toLocaleDateString('en-BD',{day:'numeric',month:'short'});
+    const isSelected = selectedDebtTxId===tx.id;
+    const row = document.createElement('div');
+    row.style.cssText = `display:flex;align-items:center;gap:10px;background:${isSelected?'rgba(255,107,107,0.18)':'var(--card2)'};border:1.5px solid ${isSelected?'rgba(255,107,107,0.5)':'transparent'};border-radius:12px;padding:10px 12px;cursor:pointer;-webkit-tap-highlight-color:transparent;`;
+    row.innerHTML = `
+      <span style="font-size:18px;">${tx.sourceIcon}</span>
+      <div style="flex:1;min-width:0;">
+        <p style="color:#fff;font-size:13px;font-weight:600;">${tx.sourceName}</p>
+        <p style="color:var(--dim);font-size:11px;">${tx.note||'Expense'} · ${d}</p>
+      </div>
+      <span style="font-family:'Space Mono',monospace;color:var(--red);font-size:12px;font-weight:700;">-${sym}${fmt(tx.amount)}</span>
+      <span style="font-size:16px;">${isSelected?'🔴':'⬜'}</span>`;
+    row.onclick = () => { selectedDebtTxId = isSelected ? null : tx.id; renderDebtTxPicker(); };
+    c.appendChild(row);
+  });
+}
+
+function renderDebtSrcPicker() {
+  const sym = currSymbol();
+  const c = document.getElementById('debt-src-list');
+  const debtSrcIds = new Set(loadDebtSources().map(d=>d.srcId));
+  const eligible = sources.filter(s => !s.isDebt && !debtSrcIds.has(s.id));
+  c.innerHTML = '';
+  if (!eligible.length) { c.innerHTML='<p style="color:var(--dim);font-size:12px;">No eligible sources.</p>'; return; }
+  eligible.forEach(src => {
+    const bal = src.totalDeposited - src.totalSpent;
+    const isSel = selectedDebtSrcId===src.id;
+    const row = document.createElement('div');
+    row.style.cssText = `display:flex;align-items:center;gap:10px;background:${isSel?'rgba(255,107,107,0.18)':'var(--card2)'};border:1.5px solid ${isSel?'rgba(255,107,107,0.5)':'transparent'};border-radius:12px;padding:10px 12px;cursor:pointer;-webkit-tap-highlight-color:transparent;`;
+    row.innerHTML = `
+      <div style="width:36px;height:36px;border-radius:11px;background:${src.color.bg}22;display:flex;align-items:center;justify-content:center;font-size:18px;">${src.icon}</div>
+      <div style="flex:1;"><p style="color:#fff;font-size:13px;font-weight:600;">${src.name}</p><p style="color:var(--dim);font-size:11px;">${sym}${fmt(bal)}</p></div>
+      <span style="font-size:16px;">${isSel?'🔴':'⬜'}</span>`;
+    row.onclick = () => { selectedDebtSrcId = isSel ? null : src.id; renderDebtSrcPicker(); };
+    c.appendChild(row);
+  });
+}
+
+function saveDebtTransaction() {
+  if (!selectedDebtTxId) { showToast('Select a transaction!', 'warn'); return; }
+  const note = document.getElementById('debt-tx-note').value.trim();
+  const debts = loadDebts();
+  if (!debts.find(d=>d.txId===selectedDebtTxId)) {
+    debts.push({ txId: selectedDebtTxId, note, addedAt: new Date().toISOString() });
+    saveDebts(debts);
+  }
+  closeModal('modal-debt');
+  renderSummary();
+  showToast('🔴 Marked as debt!', 'warn');
+}
+
+function saveDebtSource() {
+  if (!selectedDebtSrcId) { showToast('Select a source!', 'warn'); return; }
+  const note = document.getElementById('debt-src-note').value.trim();
+  const debts = loadDebtSources();
+  if (!debts.find(d=>d.srcId===selectedDebtSrcId)) {
+    debts.push({ srcId: selectedDebtSrcId, note, addedAt: new Date().toISOString() });
+    saveDebtSources(debts);
+  }
+  closeModal('modal-debt');
+  renderSummary();
+  showToast('🔴 Source marked as debt!', 'warn');
+}
+
+function unmarkDebtTx(txId) {
+  // Remove from inline isDebt flag
+  transactions = transactions.map(t => t.id===txId ? {...t, isDebt:false} : t);
+  // Remove from debt list
+  saveDebts(loadDebts().filter(d=>d.txId!==txId));
+  save();
+  renderSummary();
+  showToast('Debt mark removed.');
+}
+
+function unmarkDebtSrc(srcId) {
+  sources = sources.map(s => s.id===srcId ? {...s, isDebt:false} : s);
+  saveDebtSources(loadDebtSources().filter(d=>d.srcId!==srcId));
+  save();
+  renderSummary();
+  showToast('Source debt mark removed.');
+}
+
+// ─── PWA Install ─────────────────────────────────────────
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const banner = document.getElementById('install-banner');
+  if (banner) banner.style.display = 'flex';
+});
+
+// ─── Service Worker ───────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  const swContent = `
+    const CACHE = 'money-mgr-v1';
+    self.addEventListener('install', e => {
+      e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
+    });
+    self.addEventListener('fetch', e => {
+      e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
+    });
+  `;
+  const blob = new Blob([swContent], {type:'application/javascript'});
+  const url = URL.createObjectURL(blob);
+  navigator.serviceWorker.register(url).catch(()=>{});
+}
+
+// ─── Init ─────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  load();
+  buildIconGrid();
+  // Set correct currency tab on load
+  document.getElementById('cur-bdt').className = 'cur-tab' + (activeCurrency==='BDT'?' cur-active':'');
+  document.getElementById('cur-usd').className = 'cur-tab' + (activeCurrency==='USD'?' cur-active':'');
+  const badge = document.getElementById('cur-wallet-label');
+  if (badge) {
+    badge.textContent = activeCurrency==='BDT' ? '৳ Taka Wallet' : '$ Dollar Wallet';
+    badge.style.color = activeCurrency==='USD' ? '#F7B731' : 'var(--muted)';
+  }
+  renderAll();
+
+  const installBtn = document.getElementById('install-btn');
+  if (installBtn) installBtn.addEventListener('click', async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      const banner = document.getElementById('install-banner');
+      if (banner) banner.style.display = 'none';
+    }
+  });
+
+  const closeBanner = document.getElementById('close-banner');
+  if (closeBanner) closeBanner.addEventListener('click', () => {
+    const banner = document.getElementById('install-banner');
+    if (banner) banner.style.display = 'none';
+  });
+
+  const modalSource = document.getElementById('modal-source');
+  if (modalSource) modalSource.addEventListener('click', function(){});
+
+  const qaBtn = document.querySelectorAll('.qa-btn')[0];
+  if (qaBtn) qaBtn.addEventListener('click', () => buildIconGrid());
+
+  const profileBtn = document.getElementById('profile-icon-btn');
+  if (profileBtn) profileBtn.addEventListener('click', openProfileSheet);
+});
+</script>
+<!-- Google Identity Services -->
+<script src="https://accounts.google.com/gsi/client" async></script>
+</body>
+</html>
